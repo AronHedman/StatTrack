@@ -1,0 +1,76 @@
+services:
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    restart: unless-stopped
+    environment:
+      TZ: Europe/Stockholm
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./www/public:/var/www/public:ro
+      - ./config/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./config/ssl:/etc/ssl:ro
+    depends_on:
+      - php
+    networks:
+      - app-network
+
+  php:
+    build: ./docker/php
+    image: lemp-php:dev
+    container_name: php
+    restart: unless-stopped
+    command: php-fpm
+    volumes:
+      - ./www:/var/www
+      - ./config/php/php.ini:/usr/local/etc/php/php.ini:ro
+    networks:
+      - app-network
+    environment:
+      TZ: Europe/Stockholm
+
+  mariadb:
+    image: mariadb:latest
+    container_name: mariadb
+    restart: unless-stopped
+    volumes:
+      - ./db:/var/lib/mysql
+      - ./config/mysql/my.cnf:/etc/mysql/my.cnf:ro
+    environment:
+      MYSQL_ROOT_PASSWORD: 12345
+      TZ: Europe/Stockholm
+    networks:
+      - app-network
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: pma
+    restart: unless-stopped
+    environment:
+      PMA_HOST: mariadb
+      TZ: Europe/Stockholm
+    ports:
+      - "8080:80"
+    depends_on:
+      - mariadb
+    networks:
+      - app-network
+
+  node:
+    image: node:latest
+    container_name: node
+    restart: unless-stopped
+    working_dir: /sveltekit
+    command: "npm run dev -- --host 0.0.0.0"
+    volumes:
+      - ./sveltekit:/sveltekit
+    environment:
+      TZ: Europe/Stockholm
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
