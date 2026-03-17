@@ -19,3 +19,7 @@ sveltekit/package/
 .env
 .env.*
 !.env.example
+
+#python
+__pycache__
+python/.cache
