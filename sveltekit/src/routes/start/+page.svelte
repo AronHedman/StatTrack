@@ -9,7 +9,8 @@
         const res = await fetch("/api/stats");
         tracks = await res.json();
 
-        console.log(tracks);
+        console.log(tracks[0]);
+        console.log(tracks[1]);
     });
 </script>
 

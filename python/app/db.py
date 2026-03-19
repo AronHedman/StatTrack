@@ -6,8 +6,8 @@ load_dotenv()
 
 def getDB():
   return mysql.connector.connect(
-     host=os.getenv("HOST"),
-     user=os.getenv("USER"),
-     password=os.getenv("PASSWORD"),
-     database=os.getenv("DB")
+     host=os.getenv("mariaDB"),
+     user=os.getenv("root"),
+     password=os.getenv("12345"),
+     database=os.getenv("statTrack")
   )

@@ -7,7 +7,7 @@ import requests
 import json
 
 import lastfm
-from db import getDB
+import db
 
 app = Flask(__name__)
 app.secret_key = "12345" #måste fixa en secret generator...
@@ -36,6 +36,7 @@ def login():
             "username": user_info["name"],
             "image": user_info["image"][-1]["#text"] if user_info["image"] else None
         }
+        #db.getDb() #maybe here? await user before establishing db connection here?
         return jsonify({"success": True, "user": session["user"]})
     
     return jsonify({"success": False, "message": "Last.fm-användaren hittades inte"}), 404
@@ -58,8 +59,10 @@ def get_stats():
     
     if tracks is None:
         return jsonify({"error": "Kunde inte hämta data från Last.fm"}), 500
-        
-    return jsonify(tracks)
+    
+    tracks2 = lastfm.process_data(tracks)
+    print(tracks2)
+    return jsonify([tracks, tracks2]) #change to tracks
 
 @app.route("/hello")
 def hello():
