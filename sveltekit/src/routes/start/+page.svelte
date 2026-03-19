@@ -4,13 +4,13 @@
     let tracks = [];
 
     onMount(async () => {
-        // Vi hämtar statistik för den inloggade användaren
-        // (Du kan behöva en rutt som kollar session["user"]["username"])
+        // (kan behöva en rutt som kollar session["user"]["username"])
         const res = await fetch("/api/stats");
         tracks = await res.json();
 
-        console.log(tracks[0]);
-        console.log(tracks[1]);
+        for (const track of tracks) {
+            console.log(track);
+        }
     });
 </script>
 
@@ -18,7 +18,7 @@
 <ul>
     {#each tracks as track}
         <li>
-            <strong>{track.artist["#text"]}</strong> - {track.name}
+            <strong>{track.artist}</strong> - {track.title_cleaned} - {track.title_original}
         </li>
     {/each}
 </ul>
