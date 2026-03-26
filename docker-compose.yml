@@ -37,6 +37,16 @@ services:
 
   mariadb:
     image: mariadb:latest
+    security_opt:
+      - seccomp:unconfined
+    cap_add:
+      - SYS_ADMIN
+    healthcheck:
+      test: [ "CMD", "healthcheck.sh", "--connect", "--innodb_initialized" ]
+      interval: 10s
+      timeout: 2s
+      retries: 15
+      start_period: 30s
     container_name: mariadb
     restart: unless-stopped
     volumes:
@@ -44,9 +54,11 @@ services:
       - ./config/mysql/my.cnf:/etc/mysql/my.cnf:ro
     environment:
       MYSQL_ROOT_PASSWORD: 12345
+      MYSQL_DATABASE: statTrack
       TZ: Europe/Stockholm
     networks:
       - app-network
+    command: --log-warnings=1
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin:latest
@@ -88,7 +100,8 @@ services:
     networks:
       - app-network
     depends_on:
-      - mariadb
+      mariadb:
+        condition: "service_healthy"
     env_file:
       - .env
     ports:

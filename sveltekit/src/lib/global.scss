@@ -1,3 +1,35 @@
-h1 {
-    color: blue;
+:root {
+    --prim-color: #121212;
+    --sec-color: #285A48;
+    --darker-color: #0a0a0a;
+    --highlight-color: #B0E4CC;
+    --text-color: #E0E0E0;
+}
+
+
+* {
+    font-family: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif,
+        "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+}
+
+.reset {
+    all: unset;
+}
+
+body {
+    background-color: var(--darker-color);
+    color: var(--text-color);
+
+}
+
+.wrapper {
+    margin: 0;
+    padding: 0;
 }

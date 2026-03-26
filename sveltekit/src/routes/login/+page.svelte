@@ -3,6 +3,8 @@
     let password = "";
     let error = "";
 
+    //lägg till en onoload function för att kolla om det finns aktiv sesison.
+
     async function handleLogin() {
         const res = await fetch("/api/login", {
             method: "POST",
@@ -42,12 +44,7 @@
 
     <input type="text" bind:value={username} placeholder="Username..." />
 
-    <input
-        type="password"
-        bind:value={password}
-        placeholder="Password..."
-        on:keydown={(e) => e.key === "Enter" && handleLogin()}
-    />
+    <input type="password" bind:value={password} placeholder="Password..." />
 
     <button on:click={handleLogin}>Log in</button>
     <button on:click={handleSignup}>Sign up</button>

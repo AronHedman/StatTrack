@@ -10,7 +10,7 @@ load_dotenv()
 API_KEY = os.getenv("LASTFM_API_KEY")
 
 
-def fetch_recent_tracks(username, limit=50):
+def fetch_recent_tracks(username, limit, page):
     url = "http://ws.audioscrobbler.com/2.0/"
     params = {
         "method": "user.getrecenttracks",
@@ -18,6 +18,7 @@ def fetch_recent_tracks(username, limit=50):
         "api_key": API_KEY,
         "format": "json",
         "limit": limit,
+        "page": page,
     }
 
     try:
@@ -46,8 +47,8 @@ def verify_user(username):
 
 def clean_track_title(title):
     patterns = [  # regex
-        r"\s*[ \(\-\[ ].*?(?:remaster|remastered|remix|version|live|deluxe|anniversary|digitally|edit|bonus|radio|feat).*[\)\]]?",
-        r"\s*[ \(\-\[ ].*?\d{4}.*?[\)\]]?",  # Catches years like (2004) or - 2012
+        r"\s*[\(\-\[].*?(?:remaster|remastered|remix|version|live|deluxe|anniversary|with|edit|bonus|radio|feat).*",
+        r"\s*[\(\-\[].*?\d{4}.*?[\)\]]?",  # Catches years like (2004) or - 2012
     ]
 
     clean_title = title

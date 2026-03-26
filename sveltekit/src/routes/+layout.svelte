@@ -13,6 +13,5 @@
 <Header />
 
 <main>
-	<p>awdawds</p>
 	{@render children()}
 </main>
