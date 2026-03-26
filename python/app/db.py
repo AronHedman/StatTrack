@@ -74,6 +74,51 @@ def fetch_last_synced(conn, user_id):
     return last_synced_datetime
 
 
+def fetch_artist_id(conn, artist):
+    cursor = conn.cursor(dictionary=True)
+
+    query = "SELECT artist_id FROM artists WHERE artist_name = %s"
+    cursor.execute(query, (artist,))
+    result = cursor.fetchone()
+    cursor.close()
+
+    if result:
+        return result["artist_id"]
+    return None
+
+
+def fetch_track_ids(conn, method, value):
+    cursor = conn.cursor(dictionary=True)
+
+    if method == "artist_id":
+        query = "SELECT song_id FROM songs WHERE artist_id = %s"
+        cursor.execute(query, (value,))
+        result = cursor.fetchall()
+        song_ids = [row["song_id"] for row in result]
+
+    elif method == "title":
+        query = "SELECT song_id FROM songs WHERE title = %s"
+        cursor.execute(query, (value,))
+        result = cursor.fetchall()
+        song_ids = [row["song_id"] for row in result]
+
+    cursor.close()
+    return song_ids
+
+
+def fetch_track_name(conn, id):
+    cursor = conn.cursor(dictionary=True)
+
+    query = "SELECT title FROM songs WHERE song_id = %s"
+    cursor.execute(query, (id,))
+    result = cursor.fetchone()
+    cursor.close()
+
+    if result:
+        return result["title"]
+    return None
+
+
 def new_last_synced(conn, user_id, new_time):
     cursor = conn.cursor(dictionary=True)
 

@@ -4,8 +4,6 @@
     let tracks = [];
 
     onMount(async () => {
-        // (kan behöva en rutt som kollar session["user"]["username"])
-
         const res = await fetch("/api/fetch-recent");
         tracks = await res.json();
 

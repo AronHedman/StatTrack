@@ -1,6 +1,8 @@
 <script>
     import LatestStreams from "$lib/components/LatestStreams.svelte";
     import Ranking from "$lib/components/Ranking.svelte";
+
+    // (kan behöva en rutt som kollar session["user"]["username"])
 </script>
 
 <section id="main">

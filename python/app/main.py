@@ -181,5 +181,30 @@ def update_db():
     return jsonify(tracks)
 
 
+@app.route("/fetch-tracks", methods=["GET"])
+def fetch_tracks():
+    artist = request.args.get("artist")
+
+    if not artist:
+        return jsonify([])
+
+    # Update everything here to be able to handle more song data like album covers, artist name etc
+
+    artist_id = db.fetch_artist_id(g.db, artist)
+
+    if artist_id is None:
+        return jsonify([])
+
+    track_ids = db.fetch_track_ids(g.db, "artist_id", artist_id)
+
+    track_names = []
+    for id in track_ids:
+        track_name = db.fetch_track_name(g.db, id)
+        if track_name:
+            track_names.append(track_name)
+
+    return jsonify(track_names)
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)

@@ -1,9 +1,37 @@
 <script>
-    let artist = "";
+    let artist = $state("");
+    let tracks = $state([]);
+
+    async function fetchTracks() {
+        const res = await fetch(
+            "/api/fetch-tracks?artist=" + encodeURIComponent(artist),
+        );
+        tracks = await res.json();
+
+        for (const track of tracks) {
+            console.log(track);
+        }
+    }
+
+    $effect(() => {
+        if (artist.length > 3) {
+            fetchTracks();
+        }
+    });
 </script>
 
 <section id="ranking">
     <input type="text" bind:value={artist} />
+
+    {#if tracks}
+        <ul>
+            {#each tracks as title}
+                <li>
+                    <strong>{title}</strong>
+                </li>
+            {/each}
+        </ul>
+    {/if}
 </section>
 
 <style lang="scss">
