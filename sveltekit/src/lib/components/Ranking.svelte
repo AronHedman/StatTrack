@@ -9,7 +9,7 @@
         tracks = await res.json();
 
         for (const track of tracks) {
-            console.log(track);
+            console.log("track: " + track);
         }
     }
 
