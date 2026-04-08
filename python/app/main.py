@@ -168,6 +168,7 @@ def update_db():
             g.db.commit()
             if found_old_track:
                 break
+
             page += 1
 
         if new_last_synced:
@@ -190,18 +191,20 @@ def fetch_tracks():
 
     # Update everything here to be able to handle more song data like album covers, artist name etc
 
-    artist_id = db.fetch_artist_id(g.db, artist)
+    artist_ids = db.fetch_artist_id(g.db, artist)
 
-    if artist_id is None:
+    if artist_ids is None:
         return jsonify([])
 
-    track_ids = db.fetch_track_ids(g.db, "artist_id", artist_id)
-
     track_names = []
-    for id in track_ids:
-        track_name = db.fetch_track_name(g.db, id)
-        if track_name:
-            track_names.append(track_name)
+
+    for artist_id in artist_ids:
+        track_ids = db.fetch_track_ids(g.db, "artist_id", artist_id)
+
+        for id in track_ids:
+            track_name = db.fetch_track_name(g.db, id)
+            if track_name:
+                track_names.append(track_name)
 
     return jsonify(track_names)
 

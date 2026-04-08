@@ -8,13 +8,13 @@
         );
         tracks = await res.json();
 
-        for (const track of tracks) {
-            console.log("track: " + track);
-        }
+        // for (const track of tracks) {
+        // console.log("track: " + track);
+        // }
     }
 
     $effect(() => {
-        if (artist.length > 3) {
+        if (artist.length > 1) {
             fetchTracks();
         }
     });

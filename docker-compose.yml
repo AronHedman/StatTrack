@@ -14,6 +14,8 @@ services:
       - ./config/ssl:/etc/ssl:ro
     depends_on:
       - php
+      - node
+      - python
     networks:
       - app-network
     env_file:
@@ -37,10 +39,10 @@ services:
 
   mariadb:
     image: mariadb:latest
-    security_opt:
-      - seccomp:unconfined
-    cap_add:
-      - SYS_ADMIN
+    #security_opt:
+    #- seccomp:unconfined
+    #cap_add:
+    #- SYS_ADMIN
     healthcheck:
       test: [ "CMD", "healthcheck.sh", "--connect", "--innodb_initialized" ]
       interval: 10s

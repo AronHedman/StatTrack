@@ -1,3 +1,4 @@
+
 <script>
 	import favicon from "$lib/assets/favicon.svg";
 	import "$lib/global.scss";
@@ -15,3 +16,4 @@
 <main>
 	{@render children()}
 </main>
+

@@ -10,6 +10,20 @@ load_dotenv()
 API_KEY = os.getenv("LASTFM_API_KEY")
 
 
+def verify_user(username):
+    url = "http://ws.audioscrobbler.com/2.0/"
+    params = {
+        "method": "user.getinfo",
+        "user": username,
+        "api_key": os.getenv("LASTFM_API_KEY"),
+        "format": "json",
+    }
+    response = requests.get(url, params=params)
+    if response.status_code == 200:
+        return response.json().get("user")
+    return None
+
+
 def fetch_recent_tracks(username, limit, page):
     url = "http://ws.audioscrobbler.com/2.0/"
     params = {
@@ -29,20 +43,6 @@ def fetch_recent_tracks(username, limit, page):
     except Exception as e:
         print(f"Fel vid Last.fm-anrop: {e}")
         return None
-
-
-def verify_user(username):
-    url = "http://ws.audioscrobbler.com/2.0/"
-    params = {
-        "method": "user.getinfo",
-        "user": username,
-        "api_key": os.getenv("LASTFM_API_KEY"),
-        "format": "json",
-    }
-    response = requests.get(url, params=params)
-    if response.status_code == 200:
-        return response.json().get("user")
-    return None
 
 
 def clean_track_title(title):
@@ -93,8 +93,16 @@ def process_data(api_return):
             continue
 
         clean_title = clean_track_title(title)
-
         timestamp = format_time(date_time)
+
+        images = {}
+        track_images = track.get("image")
+        if isinstance(track_images, list):
+            for img in track_images:
+                size = img.get("size")
+                url = img.get("#text")
+                if size and url:
+                    images[size] = url
 
         if timestamp == None:
             continue
@@ -105,6 +113,8 @@ def process_data(api_return):
                 "title_cleaned": clean_title,
                 "title_original": title,
                 "date_time": timestamp,
+                "images": images,
+                "original_structure": track,
             }
         )
 

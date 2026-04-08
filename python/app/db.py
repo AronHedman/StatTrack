@@ -3,6 +3,7 @@ from mysql.connector import Error
 from dotenv import load_dotenv
 import os
 import time
+import sys
 
 load_dotenv()
 
@@ -15,7 +16,7 @@ def setup():
         try:
             pool = mysql.connector.pooling.MySQLConnectionPool(
                 pool_name="db_pool",
-                pool_size=5,
+                pool_size=10,
                 host=os.getenv("DB_HOST"),
                 user=os.getenv("DB_USER"),
                 password=os.getenv("DB_PASS"),
@@ -24,7 +25,7 @@ def setup():
             print("DB Connected")
             return pool
         except Error as error:
-            print("Pool conn failed: {error}")
+            print(f"Pool conn failed: {error}")
             retries -= 1
             time.sleep(2)  # wait a few seconds to geiv the db time to start up
     raise Exception("Failed to connect to database after 30 seconds")
@@ -79,12 +80,18 @@ def fetch_artist_id(conn, artist):
 
     query = "SELECT artist_id FROM artists WHERE artist_name = %s"
     cursor.execute(query, (artist,))
-    result = cursor.fetchone()
+    exact_result = cursor.fetchone()
+
+    if exact_result:
+        cursor.close()
+        return [exact_result["artist_id"]]
+
+    query_partial = "SELECT artist_id FROM artists WHERE artist_name LIKE %s"
+    cursor.execute(query_partial, (f"%{artist}%",))
+    results = cursor.fetchall()
     cursor.close()
 
-    if result:
-        return result["artist_id"]
-    return None
+    return [row["artist_id"] for row in results]
 
 
 def fetch_track_ids(conn, method, value):
@@ -130,26 +137,48 @@ def new_last_synced(conn, user_id, new_time):
 
 
 def add_track(cursor, user_id, track):
-    query = "INSERT IGNORE INTO artists (artist_name) VALUES (%s)"
-    cursor.execute(query, (track["artist"],))
+    try:
+        query = "INSERT IGNORE INTO artists (artist_name) VALUES (%s)"
+        cursor.execute(query, (track["artist"],))
 
-    query = "SELECT artist_id FROM artists WHERE artist_name = %s"
-    cursor.execute(query, (track["artist"],))
-    artist_id = cursor.fetchone()["artist_id"]
+        query = "SELECT artist_id FROM artists WHERE artist_name = %s"
+        cursor.execute(query, (track["artist"],))
 
-    query = "INSERT IGNORE INTO songs (artist_id, title) VALUES (%s, %s)"
-    cursor.execute(query, (artist_id, track["title_cleaned"]))
+        artist = cursor.fetchone()
+        if not artist:
+            return
 
-    query = "SELECT song_id FROM songs WHERE title = %s AND artist_id = %s"
-    cursor.execute(query, (track["title_cleaned"], artist_id))
-    song_id = cursor.fetchone()["song_id"]
+        artist_id = artist["artist_id"]
 
-    query = "INSERT IGNORE INTO play_history (user_id, song_id, played_at_datetime) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE played_at_datetime = played_at_datetime"  # this 'on duplicate key update ... is not really doing anyhing except that if is a duplicate i will make cursor.rowcount == 2 instead of 1
-    cursor.execute(query, (user_id, song_id, track["date_time"]))
+        query = "INSERT IGNORE INTO songs (artist_id, title) VALUES (%s, %s)"
+        cursor.execute(query, (artist_id, track["title_cleaned"]))
 
-    if cursor.rowcount == 1:
-        query = "INSERT INTO user_song_stats (user_id, song_id, stream_count) VALUES (%s, %s, 1) ON DUPLICATE KEY UPDATE stream_count = stream_count + 1"
-        cursor.execute(query, (user_id, song_id))
+        query = "SELECT song_id FROM songs WHERE title = %s AND artist_id = %s"
+        cursor.execute(query, (track["title_cleaned"], artist_id))
 
-        query = "INSERT INTO user_artist_stats (user_id, artist_id, stream_count) VALUES (%s, %s, 1) ON DUPLICATE KEY UPDATE stream_count = stream_count + 1"
-        cursor.execute(query, (user_id, artist_id))
+        song = cursor.fetchone()
+        if not song:
+            return
+
+        song_id = song["song_id"]
+
+        query = "INSERT IGNORE INTO play_history (user_id, song_id, played_at_datetime) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE played_at_datetime = played_at_datetime"  # this 'on duplicate key update ... is not really doing anyhing except that if is a duplicate i will make cursor.rowcount == 2 instead of 1
+        cursor.execute(query, (user_id, song_id, track["date_time"]))
+
+        # some coding wizardry to make sure that the duplicates are detected...
+        if cursor.rowcount == 1:
+            query = "INSERT INTO user_song_stats (user_id, song_id, stream_count) VALUES (%s, %s, 1) ON DUPLICATE KEY UPDATE stream_count = stream_count + 1"
+            cursor.execute(query, (user_id, song_id))
+
+            query = "INSERT INTO user_artist_stats (user_id, artist_id, stream_count) VALUES (%s, %s, 1) ON DUPLICATE KEY UPDATE stream_count = stream_count + 1"
+            cursor.execute(query, (user_id, artist_id))
+
+        valid_cols = {"extralarge", "large", "medium", "small"}
+        for size, url in track.get("images", {}).items():
+            if size in valid_cols and url:
+                query = f"UPDATE songs SET {size} = %s WHERE song_id = %s"
+                cursor.execute(query, (url, song_id))
+
+    except Exception as e:
+        print(f"CRITICAL ERROR in add_track: {str(e)}", file=sys.stderr)
+        raise e  # Re-raise so Flask shows the error if debug is on
