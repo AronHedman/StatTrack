@@ -1,5 +1,3 @@
-# pyright: reportMissingImports=false
-
 import os
 from flask import Flask, redirect, request, session, jsonify, g
 from flask_cors import CORS
@@ -7,6 +5,7 @@ import requests
 import json
 
 from werkzeug.security import generate_password_hash
+from werkzeug.exceptions import HTTPException
 
 import login
 import lastfm
@@ -43,6 +42,13 @@ def close_db(error):
     if db_conn is not None:
         db_conn.close()  # Returns connection to the pool
 
+@app.errorhandler(Exception)
+def handle_exception(e):
+    if isinstance(e, HTTPException):
+        return jsonify(error=str(e.description)), e.code
+    
+    # non-http errors
+    return jsonify(success=False, message="An unexpected internal server error occurred."), 500
 
 @app.route("/login", methods=["POST"])
 def handle_login():

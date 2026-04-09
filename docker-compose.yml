@@ -82,7 +82,7 @@ services:
     container_name: node
     restart: unless-stopped
     working_dir: /sveltekit
-    command: "npm run dev -- --host 0.0.0.0"
+    command: npm run dev -- --host 0.0.0.0
     volumes:
       - ./sveltekit:/sveltekit
     environment:

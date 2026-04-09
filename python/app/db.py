@@ -17,9 +17,9 @@ def setup():
             pool = mysql.connector.pooling.MySQLConnectionPool(
                 pool_name="db_pool",
                 pool_size=10,
-                host=os.getenv("DB_HOST"),
-                user=os.getenv("DB_USER"),
-                password=os.getenv("DB_PASS"),
+                host=os.getenv("DB_HOST", "mariadb"),
+                user=os.getenv("DB_USER", "root"),
+                password=os.getenv("DB_PASS", "12345"),
                 database=DB_NAME,
             )
             print("DB Connected")

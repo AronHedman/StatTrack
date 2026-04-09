@@ -13,7 +13,8 @@ php/*
 
 sveltekit/node_modules
 sveltekit/build/
-sveltekit/.svelte-kit/
+sveltekit/.svelte-kit/*
+!sveltekit/.svelte-kit/tsconfig.json
 sveltekit/package/
 
 .env
@@ -23,3 +24,5 @@ sveltekit/package/
 #python
 __pycache__
 python/.cache
+
+node_modules

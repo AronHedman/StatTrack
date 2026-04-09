@@ -1,4 +1,3 @@
-
 <script>
     let username = "";
     let password = "";
@@ -54,4 +53,3 @@
         <p style="color: red;">{error}</p>
     {/if}
 </div>
-
