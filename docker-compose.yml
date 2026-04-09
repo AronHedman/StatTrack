@@ -57,7 +57,7 @@ services:
       - ./db_init:/docker-entrypoint-initdb.d
     environment:
       MYSQL_ROOT_PASSWORD: 12345
-      MYSQL_DATABASE: statTrack
+      MYSQL_DATABASE: stattrack
       TZ: Europe/Stockholm
     networks:
       - app-network
