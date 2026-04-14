@@ -1,54 +1,29 @@
 <script>
-    let artist = $state("");
-    let tracks = $state([]);
+    import RankingSearchArtist from "$lib/components/RankingSearchArtist.svelte";
+    import RankSongs from "$lib/components/RankSongs.svelte";
 
-    async function fetchTracks() {
-        const res = await fetch(
-            "/api/fetch-tracks?artist=" + encodeURIComponent(artist),
-        );
-        tracks = await res.json();
+    let selectedArtist = $state(null);
 
-        // for (const track of tracks) {
-        // console.log("track: " + track);
-        // }
+    function handleSelectArtist(artist) {
+        selectedArtist = artist;
     }
 
-    $effect(() => {
-        if (artist.length > 1) {
-            fetchTracks();
-        }
-    });
+    function handleBack() {
+        selectedArtist = null;
+    }
 </script>
 
-<section id="ranking">
-    <input type="text" bind:value={artist} />
-
-    {#if tracks}
-        <ul>
-            {#each tracks as title}
-                <li>
-                    <strong>{title}</strong>
-                </li>
-            {/each}
-        </ul>
+<section id="ranking-main">
+    {#if !selectedArtist}
+        <RankingSearchArtist onSelect={handleSelectArtist} />
+    {:else}
+        <RankSongs artist={selectedArtist} onBack={handleBack} />
     {/if}
 </section>
 
-<style lang="scss">
-    #ranking {
+<style>
+    /* Add any layout styles for the container here */
+    #ranking-main {
         height: 100%;
-        overflow: auto;
-        padding: 2rem;
-        margin: 2rem;
-        border: 0.2rem solid var(--highlight-color);
-        border-radius: 2rem;
-        background-color: var(--prim-color);
-        h2 {
-            padding: 2rem;
-        }
-        li {
-            margin: 0.5rem;
-            list-style: none;
-        }
     }
 </style>

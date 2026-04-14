@@ -1,4 +1,3 @@
-
 <script>
     import LatestStreams from "$lib/components/LatestStreams.svelte";
     import Ranking from "$lib/components/Ranking.svelte";
@@ -27,4 +26,3 @@
         grid-area: "latestStreams";
     }
 </style>
-

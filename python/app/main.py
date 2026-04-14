@@ -10,6 +10,7 @@ from werkzeug.exceptions import HTTPException
 import login
 import lastfm
 import db
+import ranking
 
 app = Flask(__name__)
 app.secret_key = "12345"  # måste fixa en secret generator...
@@ -42,13 +43,18 @@ def close_db(error):
     if db_conn is not None:
         db_conn.close()  # Returns connection to the pool
 
+
 @app.errorhandler(Exception)
 def handle_exception(e):
     if isinstance(e, HTTPException):
         return jsonify(error=str(e.description)), e.code
-    
+
     # non-http errors
-    return jsonify(success=False, message="An unexpected internal server error occurred."), 500
+    return (
+        jsonify(success=False, message="An unexpected internal server error occurred."),
+        500,
+    )
+
 
 @app.route("/login", methods=["POST"])
 def handle_login():
@@ -213,6 +219,68 @@ def fetch_tracks():
                 track_names.append(track_name)
 
     return jsonify(track_names)
+
+
+@app.route("/ranking/user", methods=["POST"])
+def save_ranking():
+    user = session.get("user")
+    if not user:
+        return jsonify({"error": "Inte inloggad"}), 401
+
+    data = request.json
+    artist_id = data.get("artist_id")
+    rankings = data.get("rankings")
+
+    # rankings should look like: [{"song_id": 15, "rank": 1}, {"song_id": 42, "rank": 2}, ...]
+
+    if not artist_id or not isinstance(rankings, list):
+        return (
+            jsonify({"error": "Missing artist_id or wrong ranking format"}),
+            400,
+        )
+
+    username = user["username"]
+    user_id = db.fetch_user_id(g.db, username)
+
+    try:
+        ranking.save_user_ranking(g.db, user_id, artist_id, rankings)
+        return jsonify({"success": True, "message": "Ranking saved successfully"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/ranking/user", methods=["GET"])
+def get_user_ranking():
+    user = session.get("user")
+    if not user:
+        return jsonify({"error": "Inte inloggad"}), 401
+
+    artist_id = request.args.get("artist_id")
+    if not artist_id:
+        return jsonify({"error": "Missing artist_id parameter"}), 400
+
+    username = user["username"]
+    user_id = db.fetch_user_id(g.db, username)
+
+    try:
+        results = ranking.fetch_user_ranking(g.db, user_id, artist_id)
+        return jsonify(results)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/ranking/global", methods=["GET"])
+def get_global_ranking():
+    artist_id = request.args.get("artist_id")
+
+    if not artist_id:
+        return jsonify({"error": "Missing artist_id parameter"}), 400
+
+    try:
+        results = ranking.fetch_global_ranking(g.db, artist_id)
+        return jsonify(results)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":
