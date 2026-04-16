@@ -194,32 +194,82 @@ def update_db():
     return jsonify(tracks)
 
 
-@app.route("/fetch-tracks", methods=["GET"])
+@app.route("/fetch/tracks", methods=["GET"])
 def fetch_tracks():
+    artist = request.args.get("artist")  #pass either a artist or a track component in the uri
+    title = request.args.get("title")
+
+    if not artist and not title:
+        return jsonify([])
+
+    # Update everything here to be able to handle more song data like album covers, artist name etc
+    
+    if artist and title:
+        artist_ids = db.fetch_artist_id(g.db, artist)
+
+        if artist_ids is None:
+            return jsonify([])
+        
+        track_names = []
+
+        for artist_id in artist_ids:
+            track_ids = db.fetch_track_ids(g.db, "artist&title", [artist_id, title])
+            
+            for id in track_ids:
+                track_name = db.fetch_track_name(g.db, id)
+                if title:
+                    track_names.append(track_name)
+    if artist:
+        artist_ids = db.fetch_artist_id(g.db, artist)
+
+        if artist_ids is None:
+            return jsonify([])
+
+        track_names = []
+
+        for artist_id in artist_ids:
+            track_ids = db.fetch_track_ids(g.db, "artist_id", artist_id)
+
+            for id in track_ids:
+                track_name = db.fetch_track_name(g.db, id)
+                if title:
+                    track_names.append(track_name)
+
+    if title:
+        track_ids = db.fetch_track_ids(g.db, "title", title)
+
+        if track_ids is None:
+            return jsonify([])
+        
+        track_names = []
+
+        for track_id in track_ids:
+            track_name = db.fetch_track_name(g.db, track_id)
+            if track_name:
+                track_names.append(track_name)
+
+
+    return jsonify(track_names)
+
+@app.route("/fetch/artists", methods=["GET"])
+def fetch_artists():
     artist = request.args.get("artist")
 
     if not artist:
         return jsonify([])
-
-    # Update everything here to be able to handle more song data like album covers, artist name etc
-
+    
     artist_ids = db.fetch_artist_id(g.db, artist)
 
     if artist_ids is None:
         return jsonify([])
-
-    track_names = []
-
+    
+    artist_names = []
     for artist_id in artist_ids:
-        track_ids = db.fetch_track_ids(g.db, "artist_id", artist_id)
+        artist_name = db.fetch_artist_name(g.db, artist_id)
+        if artist_name:
+            artist_names.append(artist_name)
 
-        for id in track_ids:
-            track_name = db.fetch_track_name(g.db, id)
-            if track_name:
-                track_names.append(track_name)
-
-    return jsonify(track_names)
-
+    return jsonify(artist_names)
 
 @app.route("/ranking/user", methods=["POST"])
 def save_ranking():

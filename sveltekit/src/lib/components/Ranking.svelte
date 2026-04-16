@@ -1,6 +1,6 @@
 <script>
     import RankingSearchArtist from "$lib/components/RankingSearchArtist.svelte";
-    import RankSongs from "$lib/components/RankSongs.svelte";
+    import RankSongs from "$lib/components/RankingSongs.svelte";
 
     let selectedArtist = $state(null);
 

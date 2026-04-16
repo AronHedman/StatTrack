@@ -1,45 +1,46 @@
 <script>
     let { onSelect } = $props();
 
-    let artist = $state("");
-    let tracks = $state([]);
+    let artist_input = $state("");
+    let artists = $state([]);
 
-    async function fetchTracks() {
+    let debounceTimer;
+
+    async function fetchArtists() {
         const res = await fetch(
-            "/api/fetch-tracks?artist=" + encodeURIComponent(artist),
+            "/api/fetch/artists?artist=" + encodeURIComponent(artist_input),
         );
-        tracks = await res.json();
-
-        // for (const track of tracks) {
-        // console.log("track: " + track);
-        // }
+        artists = await res.json();
     }
 
     $effect(() => {
-        if (artist.length > 1) {
-            fetchTracks();
+        if (artist_input.length > 1) {
+            clearTimeout(debounceTimer);
+
+            debounceTimer = setTimeout(() => {
+                fetchArtists();
+            }, 200);
         }
     });
 
     function clickArtist(artist) {
-        // This updates 'selectedArtist' in the parent, triggering the UI switch
         onSelect(artist);
     }
 </script>
 
 <section id="ranking-artist">
-    <input type="text" bind:value={artist} />
+    <input type="text" bind:value={artist_input} />
 
-    {#if tracks}
+    {#if artists}
         <div>
             <ul>
-                {#each tracks as title}
+                {#each artists as artist_name}
                     <li>
                         <button
                             class="reset"
-                            onclick={() => clickArtist(artist)}
+                            onclick={() => clickArtist(artist_name)}
                         >
-                            <strong>{title}</strong>
+                            <strong>{artist_name}</strong>
                         </button>
                     </li>
                 {/each}

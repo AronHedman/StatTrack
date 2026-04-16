@@ -103,9 +103,15 @@ def fetch_track_ids(conn, method, value):
         result = cursor.fetchall()
         song_ids = [row["song_id"] for row in result]
 
-    elif method == "title":
-        query = "SELECT song_id FROM songs WHERE title = %s"
+    elif method == "track_name":
+        query = "SELECT song_id FROM songs WHERE track_name = %s"
         cursor.execute(query, (value,))
+        result = cursor.fetchall()
+        song_ids = [row["song_id"] for row in result]
+
+    elif method == "artist&track_name":
+        query = "SELECT song_id FROM songs WHERE artist_id = %s AND title = %s"
+        cursor.execute(query, (value[0], value[1]))
         result = cursor.fetchall()
         song_ids = [row["song_id"] for row in result]
 
@@ -123,6 +129,18 @@ def fetch_track_name(conn, id):
 
     if result:
         return result["title"]
+    return None
+
+def fetch_artist_name(conn, id):
+    cursor = conn.cursor(dictionary=True)
+
+    query = "SELECT artist_name FROM artists WHERE artist_id = %s"
+    cursor.execute(query, (id,))
+    result = cursor.fetchone()
+    cursor.close()
+
+    if result:
+        return result["artist_name"]
     return None
 
 
