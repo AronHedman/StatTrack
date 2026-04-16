@@ -219,7 +219,7 @@ def fetch_tracks():
                 track_name = db.fetch_track_name(g.db, id)
                 if title:
                     track_names.append(track_name)
-    if artist:
+    elif artist:
         artist_ids = db.fetch_artist_id(g.db, artist)
 
         if artist_ids is None:
@@ -235,7 +235,7 @@ def fetch_tracks():
                 if title:
                     track_names.append(track_name)
 
-    if title:
+    elif title:
         track_ids = db.fetch_track_ids(g.db, "title", title)
 
         if track_ids is None:

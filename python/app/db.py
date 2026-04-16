@@ -100,20 +100,36 @@ def fetch_track_ids(conn, method, value):
     if method == "artist_id":
         query = "SELECT song_id FROM songs WHERE artist_id = %s"
         cursor.execute(query, (value,))
-        result = cursor.fetchall()
-        song_ids = [row["song_id"] for row in result]
+        results = cursor.fetchall()
+        song_ids = [row["song_id"] for row in results]
 
-    elif method == "track_name":
-        query = "SELECT song_id FROM songs WHERE track_name = %s"
+    elif method == "title":
+        query = "SELECT song_id FROM songs WHERE title = %s"
         cursor.execute(query, (value,))
-        result = cursor.fetchall()
-        song_ids = [row["song_id"] for row in result]
+        exact_result = cursor.fetchall()
 
-    elif method == "artist&track_name":
+        if exact_result:
+            cursor.close()
+            return [row["song_id"] for row in exact_result]
+
+        query_partial = "SELECT song_id FROM songs WHERE title LIKE %s"
+        cursor.execute(query_partial, (f"%{value}%",))
+        results = cursor.fetchall()
+        song_ids = [row["song_id"] for row in results]
+
+    elif method == "artist&title":
         query = "SELECT song_id FROM songs WHERE artist_id = %s AND title = %s"
         cursor.execute(query, (value[0], value[1]))
-        result = cursor.fetchall()
-        song_ids = [row["song_id"] for row in result]
+        exact_result = cursor.fetchone()
+
+        if exact_result:
+            cursor.close()
+            return [exact_result["song_id"]]
+
+        query_partial = "SELECT song_id FROM songs WHERE artist_id = %s AND title LIKE %s"
+        cursor.execute(query_partial, (value[0], f"%{value[1]}%"))
+        results = cursor.fetchall()
+        song_ids = [row["song_id"] for row in results]
 
     cursor.close()
     return song_ids

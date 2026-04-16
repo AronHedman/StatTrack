@@ -16,7 +16,17 @@
         tracks = await res.json();
     }
 
+    async function fetchAllTracks() {
+        const res = await fetch(
+            "/api/fetch/tracks?artist=" + encodeURIComponent(artist),
+        );
+        tracks = await res.json();
+    }
+
     $effect(() => {
+        if (tracks_input.length < 2) {
+            fetchAllTracks();
+        }
         if (tracks_input.length > 1) {
             clearTimeout(debounceTimer);
 
