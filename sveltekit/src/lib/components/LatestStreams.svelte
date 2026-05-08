@@ -47,7 +47,11 @@
 <style lang="scss">
     .latest-streams {
         height: 100%;
-        overflow: auto;
+        min-height: 0;
+
+        display: flex;
+        flex-direction: column;
+
         padding: 24px;
         border: 1px solid var(--border-subtle);
         border-radius: 20px;
@@ -63,13 +67,13 @@
         letter-spacing: -0.01em;
         line-height: 1.3;
         margin-bottom: 16px;
+        flex-shrink: 0;
     }
 
     .track-list {
-        list-style: none;
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
     }
 
     .track-item {

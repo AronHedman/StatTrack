@@ -211,13 +211,9 @@
 
 <style lang="scss">
     .ranking-song {
-        height: 100%;
-        overflow: auto;
-        padding: 32px;
-        border: 1px solid var(--border-subtle);
-        border-radius: 20px;
-        background-color: var(--bg-surface);
-        box-shadow: var(--shadow-card);
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
         display: flex;
         flex-direction: column;
     }
@@ -263,6 +259,7 @@
     }
 
     .track-search {
+        flex-shrink: 0;
         margin-bottom: 16px;
     }
 
@@ -398,6 +395,8 @@
         .ranking-grid {
             grid-template-columns: repeat(3, 1fr);
             grid-template-rows: repeat(4, 1fr);
+            flex: 1;
+            min-height: 0;
         }
     }
 
@@ -406,6 +405,8 @@
             grid-template-columns: repeat(2, 1fr);
             grid-template-rows: repeat(5, 1fr);
             gap: 8px;
+            flex: 1;
+            min-height: 0;
         }
 
         .ranking-song {

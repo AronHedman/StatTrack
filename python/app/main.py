@@ -1,6 +1,7 @@
 import os
 from flask import Flask, redirect, request, session, jsonify, g
 from flask_cors import CORS
+from datetime import timedelta
 import requests
 import json
 import traceback
@@ -13,8 +14,28 @@ import lastfm
 import db
 import ranking
 
+
+
+
+
+#Added the app secret key to the env file on home computer, not pushed to github so add it on c´school comp as well...
+
+
+
+
+
+
 app = Flask(__name__)
-app.secret_key = "12345"  # måste fixa en secret generator...
+app.secret_key = os.environ.get("APP_SECRET", "dev-secret-key-change-me") # change to ("SECRET_KEY", os.urandom(32)) when actually implemenmts a env var for SECRET_KEY
+
+"dev-secret-key-change-me"
+
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=False,  # True in production (HTTPS)
+    PERMANENT_SESSION_LIFETIME=timedelta(days=7),
+)
 
 CORS(
     app,
@@ -52,6 +73,16 @@ def handle_exception(e):
         return jsonify(error=str(e.description)), e.code
     return jsonify(success=False, message=str(e)), 500
 
+@app.route("/me", methods=["GET"]) # returns user information on the current user
+def me():
+    user = session.get("user")
+    if not user:
+        return jsonify({"authenticated": False}), 401
+
+    return jsonify({
+        "authenticated": True,
+        "user": user
+    })
 
 @app.route("/login", methods=["POST"])
 def handle_login():
@@ -67,6 +98,7 @@ def handle_login():
 
     if user_info:
         if login.verify_user(g.db, username, password):
+            session.permanent = True
             session["user"] = {"username": user_info["name"]}
             return jsonify({"success": True})
         else:
@@ -77,8 +109,12 @@ def handle_login():
                 409,
             )
     else:
-        return jsonify({"Success": False, "message": "Couldn't fetch Last.FM user"})
+        return jsonify({"success": False, "message": "Couldn't fetch Last.FM user"})
 
+@app.route("/logout", methods=["POST"])
+def logout():
+    session.clear()
+    return jsonify({"success": True})
 
 @app.route("/signup", methods=["POST"])
 def handle_signup():
@@ -100,13 +136,14 @@ def handle_signup():
             )
         else:
             login.new_user(g.db, username, password)
+            session.permanent = True
             session["user"] = {"username": user_info["name"]}
             return jsonify({"success": True})
 
     else:
         return jsonify(
             {
-                "Success": False,
+                "success": False,
                 "message": "To use this program, please head to {https://www.last.fm/join} and create an account. Then sing in here with the same username",
             }
         )

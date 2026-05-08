@@ -87,13 +87,10 @@
 <style lang="scss">
     .ranking-artist {
         height: 100%;
-        overflow: auto;
-        padding: 32px;
-        border: 1px solid var(--border-subtle);
-        border-radius: 20px;
-        background-color: var(--bg-surface);
-        box-shadow: var(--shadow-card);
-        min-height: 500px;
+        min-height: 0;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
     }
 
     .search-wrapper {

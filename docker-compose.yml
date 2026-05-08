@@ -82,11 +82,16 @@ services:
     container_name: node
     restart: unless-stopped
     working_dir: /sveltekit
-    command: npm run dev -- --host 0.0.0.0
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0" # npm run dev -- --host 0.0.0.0
     volumes:
       - ./sveltekit:/sveltekit
+      - /sveltekit/node_modules
+    ports:
+      - "5173:5173"
     environment:
       TZ: Europe/Stockholm
+      CHOKIDAR_USEPOLLING: "true"
+      WATCHPACK_POLLING: "true"
     networks:
       - app-network
     env_file:

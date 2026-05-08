@@ -1,4 +1,7 @@
 <script>
+    import { on } from "svelte/events";
+    import { onMount } from "svelte";
+
     let username = "";
     let password = "";
     let error = "";
@@ -7,6 +10,7 @@
         const res = await fetch("/api/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
+            credentials: "include",
             body: JSON.stringify({ username, password }),
         });
 
@@ -23,6 +27,7 @@
         const res = await fetch("/api/signup", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
+            credentials: "include",
             body: JSON.stringify({ username, password }),
         });
 
@@ -34,6 +39,16 @@
             error = data.message;
         }
     }
+
+    onMount(async () => {
+        const res = await fetch("/api/me", {
+            credentials: "include",
+        });
+
+        if (res.ok) {
+            window.location.href = "/start";
+        }
+    });
 </script>
 
 <section class="login-wrapper">
