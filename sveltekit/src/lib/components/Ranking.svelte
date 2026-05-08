@@ -1,6 +1,6 @@
 <script>
     import RankingSearchArtist from "$lib/components/RankingSearchArtist.svelte";
-    import RankSongs from "$lib/components/RankingSongs.svelte";
+    import RankingSongs from "$lib/components/RankingSongs.svelte";
 
     let selectedArtist = $state(null);
 
@@ -13,17 +13,16 @@
     }
 </script>
 
-<section id="ranking-main">
+<section class="ranking-main">
     {#if !selectedArtist}
         <RankingSearchArtist onSelect={handleSelectArtist} />
     {:else}
-        <RankSongs artist={selectedArtist} onBack={handleBack} />
+        <RankingSongs artist={selectedArtist} onBack={handleBack} />
     {/if}
 </section>
 
-<style>
-    /* Add any layout styles for the container here */
-    #ranking-main {
+<style lang="scss">
+    .ranking-main {
         height: 100%;
     }
 </style>

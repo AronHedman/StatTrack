@@ -1,28 +1,65 @@
 <script>
-    import LatestStreams from "$lib/components/LatestStreams.svelte";
+    import Header from "$lib/components/Header.svelte";
     import Ranking from "$lib/components/Ranking.svelte";
-
-    // (kan behöva en rutt som kollar session["user"]["username"])
+    import LatestStreams from "$lib/components/LatestStreams.svelte";
 </script>
 
-<section id="main">
-    <div class="wrapper ranking-wrapper"><Ranking /></div>
-    <div class="wrapper latestStreams-wrapper"><LatestStreams /></div>
-</section>
+<div class="page">
+    <Header />
+    <main class="main-content">
+        <div class="container">
+            <div class="left-column">
+                <Ranking />
+            </div>
+            <div class="right-column">
+                <LatestStreams />
+            </div>
+        </div>
+    </main>
+</div>
 
-<style>
-    #main {
+<style lang="scss">
+    .page {
+        min-height: 100vh;
+        background: var(--bg-base);
+    }
+
+    .main-content {
+        padding: 24px 32px;
+    }
+
+    .container {
         display: grid;
-        gap: 10vw;
-        padding: 2rem;
-        grid: "ranking latestStreams" 70vh / 1fr 1fr;
+        grid-template-columns: 2fr 1fr;
+        gap: 24px;
+        max-width: 1400px;
+        margin: 0 auto;
     }
 
-    .ranking-wrapper {
-        grid-area: "ranking";
+    .left-column,
+    .right-column {
+        min-height: calc(100vh - 64px - 48px);
     }
 
-    .latestStreams-wrapper {
-        grid-area: "latestStreams";
+    @media (max-width: 1023px) {
+        .container {
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .main-content {
+            padding: 16px;
+        }
+    }
+
+    @media (max-width: 767px) {
+        .container {
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+
+        .main-content {
+            padding: 12px;
+        }
     }
 </style>

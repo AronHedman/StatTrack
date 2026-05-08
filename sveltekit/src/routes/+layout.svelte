@@ -1,19 +1,12 @@
-
 <script>
-	import favicon from "$lib/assets/favicon.svg";
 	import "$lib/global.scss";
 
-	import Header from "$lib/components/Header.svelte";
 	let { children } = $props();
 </script>
 
 <svelte:head>
-	<link rel="icon" href={favicon} />
+	<title>StatTrack</title>
+	<meta name="description" content="Rank your favorite songs" />
 </svelte:head>
 
-<Header />
-
-<main>
-	{@render children()}
-</main>
-
+{@render children()}

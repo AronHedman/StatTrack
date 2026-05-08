@@ -126,7 +126,9 @@ def fetch_track_ids(conn, method, value):
             cursor.close()
             return [exact_result["song_id"]]
 
-        query_partial = "SELECT song_id FROM songs WHERE artist_id = %s AND title LIKE %s"
+        query_partial = (
+            "SELECT song_id FROM songs WHERE artist_id = %s AND title LIKE %s"
+        )
         cursor.execute(query_partial, (value[0], f"%{value[1]}%"))
         results = cursor.fetchall()
         song_ids = [row["song_id"] for row in results]
@@ -147,6 +149,7 @@ def fetch_track_name(conn, id):
         return result["title"]
     return None
 
+
 def fetch_artist_name(conn, id):
     cursor = conn.cursor(dictionary=True)
 
@@ -157,6 +160,19 @@ def fetch_artist_name(conn, id):
 
     if result:
         return result["artist_name"]
+    return None
+
+
+def fetch_track_data(conn, id):
+    cursor = conn.cursor(dictionary=True)
+
+    query = "SELECT * FROM songs WHERE song_id = %s"
+    cursor.execute(query, (id,))
+    result = cursor.fetchone()
+    cursor.close()
+
+    if result:
+        return result
     return None
 
 

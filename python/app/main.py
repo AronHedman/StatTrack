@@ -3,6 +3,7 @@ from flask import Flask, redirect, request, session, jsonify, g
 from flask_cors import CORS
 import requests
 import json
+import traceback
 
 from werkzeug.security import generate_password_hash
 from werkzeug.exceptions import HTTPException
@@ -46,14 +47,10 @@ def close_db(error):
 
 @app.errorhandler(Exception)
 def handle_exception(e):
+    app.logger.exception("Unhandled error")
     if isinstance(e, HTTPException):
         return jsonify(error=str(e.description)), e.code
-
-    # non-http errors
-    return (
-        jsonify(success=False, message="An unexpected internal server error occurred."),
-        500,
-    )
+    return jsonify(success=False, message=str(e)), 500
 
 
 @app.route("/login", methods=["POST"])
@@ -196,28 +193,30 @@ def update_db():
 
 @app.route("/fetch/tracks", methods=["GET"])
 def fetch_tracks():
-    artist = request.args.get("artist")  #pass either a artist or a track component in the uri
+    artist = request.args.get(
+        "artist"
+    )  # pass either a artist or a track component in the uri
     title = request.args.get("title")
 
     if not artist and not title:
         return jsonify([])
 
     # Update everything here to be able to handle more song data like album covers, artist name etc
-    
+
     if artist and title:
         artist_ids = db.fetch_artist_id(g.db, artist)
 
         if artist_ids is None:
             return jsonify([])
-        
+
         track_names = []
 
         for artist_id in artist_ids:
             track_ids = db.fetch_track_ids(g.db, "artist&title", [artist_id, title])
-            
+
             for id in track_ids:
                 track_name = db.fetch_track_name(g.db, id)
-                if title:
+                if track_name:
                     track_names.append(track_name)
     elif artist:
         artist_ids = db.fetch_artist_id(g.db, artist)
@@ -232,7 +231,7 @@ def fetch_tracks():
 
             for id in track_ids:
                 track_name = db.fetch_track_name(g.db, id)
-                if title:
+                if track_name:
                     track_names.append(track_name)
 
     elif title:
@@ -240,7 +239,7 @@ def fetch_tracks():
 
         if track_ids is None:
             return jsonify([])
-        
+
         track_names = []
 
         for track_id in track_ids:
@@ -248,21 +247,30 @@ def fetch_tracks():
             if track_name:
                 track_names.append(track_name)
 
+    tracks_data = []
+    for track_name in track_names:
+        track_ids = db.fetch_track_ids(g.db, "title", track_name)
+        for track_id in track_ids:
+            if track_id:
+                track_data = db.fetch_track_data(g.db, track_id)
+                if track_data:
+                    tracks_data.append(track_data)
 
-    return jsonify(track_names)
+    return jsonify(tracks_data)
 
-@app.route("/fetch/artists", methods=["GET"])
-def fetch_artists():
+
+@app.route("/fetch/artists/names", methods=["GET"])
+def fetch_artists_names():
     artist = request.args.get("artist")
 
     if not artist:
         return jsonify([])
-    
+
     artist_ids = db.fetch_artist_id(g.db, artist)
 
     if artist_ids is None:
         return jsonify([])
-    
+
     artist_names = []
     for artist_id in artist_ids:
         artist_name = db.fetch_artist_name(g.db, artist_id)
@@ -270,6 +278,22 @@ def fetch_artists():
             artist_names.append(artist_name)
 
     return jsonify(artist_names)
+
+
+@app.route("/fetch/artists/ids", methods=["GET"])
+def fetch_artist_ids():
+    artist = request.args.get("artist")
+
+    if not artist:
+        return jsonify([])
+
+    artist_ids = db.fetch_artist_id(g.db, artist)
+
+    if artist_ids is None:
+        return jsonify([])
+
+    return jsonify(artist_ids)
+
 
 @app.route("/ranking/user", methods=["POST"])
 def save_ranking():
@@ -313,8 +337,17 @@ def get_user_ranking():
     user_id = db.fetch_user_id(g.db, username)
 
     try:
-        results = ranking.fetch_user_ranking(g.db, user_id, artist_id)
-        return jsonify(results)
+        rankings = ranking.fetch_user_ranking(g.db, user_id, artist_id)
+
+        hydrated = []
+        for item in rankings:
+            track = db.fetch_track_data(g.db, item["song_id"])
+            if track:
+                track["rank"] = item["rank"]
+                hydrated.append(track)
+
+        return jsonify(hydrated)
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
