@@ -31,8 +31,11 @@
         {#if menuState}
             <div class="burger-content">
                 <a href="#top" title="New Start">Top</a>
-                <a href="javascript:void(0);" onclick={logout} title="Log out"
-                    >Log out</a
+                <a
+                    id="logout"
+                    href="javascript:void(0);"
+                    onclick={logout}
+                    title="Log out">Log out</a
                 >
             </div>
         {/if}
@@ -101,6 +104,10 @@
                 color: var(--text-primary);
             }
         }
+    }
+
+    #logout:hover {
+        background-color: var(--alert-color);
     }
 
     .active {

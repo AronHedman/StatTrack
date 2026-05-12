@@ -195,12 +195,4 @@
             color: var(--text-primary);
         }
     }
-
-    .error {
-        font-family: "Inter", system-ui, sans-serif;
-        font-size: 13px;
-        color: #ff6b6b;
-        text-align: center;
-        margin-top: 4px;
-    }
 </style>
