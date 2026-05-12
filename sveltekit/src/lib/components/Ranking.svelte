@@ -11,18 +11,8 @@
     function handleBack() {
         selectedArtist = null;
     }
-
-    async function logout() {
-        await fetch("/api/logout", {
-            method: "POST",
-            credentials: "include",
-        });
-
-        window.location.replace("/login");
-    }
 </script>
 
-<button onclick={logout}>Log out</button>
 <section class="ranking-main">
     {#if !selectedArtist}
         <RankingSearchArtist onSelect={handleSelectArtist} />

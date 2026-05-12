@@ -4,6 +4,15 @@
     function toggleMenu() {
         menuState = !menuState;
     }
+
+    async function logout() {
+        await fetch("/api/logout", {
+            method: "POST",
+            credentials: "include",
+        });
+
+        window.location.replace("/login");
+    }
 </script>
 
 <svelte:head>
@@ -22,6 +31,9 @@
         {#if menuState}
             <div class="burger-content">
                 <a href="#top" title="New Start">Top</a>
+                <a href="javascript:void(0);" onclick={logout} title="Log out"
+                    >Log out</a
+                >
             </div>
         {/if}
 
