@@ -16,6 +16,9 @@
             const res = await fetch(
                 "/api/fetch/artists/names?artist=" +
                     encodeURIComponent(artist_input),
+                {
+                    credentials: "include",
+                },
             );
             if (res.ok) {
                 artists = await res.json();

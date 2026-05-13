@@ -14,19 +14,13 @@ import lastfm
 import db
 import ranking
 
-
-
-
-
-#Added the app secret key to the env file on home computer, not pushed to github so add it on c´school comp as well...
-
-
-
-
+# Added the app secret key to the env file on home computer, not pushed to github so add it on c´school comp as well...
 
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("APP_SECRET", "dev-secret-key-change-me") # change to ("SECRET_KEY", os.urandom(32)) when actually implemenmts a env var for SECRET_KEY
+app.secret_key = os.environ.get(
+    "APP_SECRET", "dev-secret-key-change-me"
+)  # change to ("SECRET_KEY", os.urandom(32)) when actually implemenmts a env var for SECRET_KEY
 
 "dev-secret-key-change-me"
 
@@ -73,16 +67,15 @@ def handle_exception(e):
         return jsonify(error=str(e.description)), e.code
     return jsonify(success=False, message=str(e)), 500
 
-@app.route("/me", methods=["GET"]) # returns user information on the current user
+
+@app.route("/me", methods=["GET"])  # returns user information on the current user
 def me():
     user = session.get("user")
     if not user:
         return jsonify({"authenticated": False}), 401
 
-    return jsonify({
-        "authenticated": True,
-        "user": user
-    })
+    return jsonify({"authenticated": True, "user": user})
+
 
 @app.route("/login", methods=["POST"])
 def handle_login():
@@ -111,10 +104,12 @@ def handle_login():
     else:
         return jsonify({"success": False, "message": "Couldn't fetch Last.FM user"})
 
+
 @app.route("/logout", methods=["POST"])
 def logout():
     session.clear()
     return jsonify({"success": True})
+
 
 @app.route("/signup", methods=["POST"])
 def handle_signup():
@@ -326,7 +321,7 @@ def fetch_artist_ids():
 
     artist_ids = db.fetch_artist_id(g.db, artist)
 
-    if artist_ids is None:
+    if not artist_ids:
         return jsonify([])
 
     return jsonify(artist_ids)

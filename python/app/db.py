@@ -56,11 +56,11 @@ def fetch_user_id(conn, username):
 
     query = "SELECT user_id FROM users WHERE username = %s"
     cursor.execute(query, (username,))
-    user_id = cursor.fetchone()["user_id"]
+    row = cursor.fetchone()
 
     cursor.close()
 
-    return user_id
+    return row["user_id"] if row else None
 
 
 def fetch_last_synced(conn, user_id):
@@ -96,6 +96,8 @@ def fetch_artist_id(conn, artist):
 
 def fetch_track_ids(conn, method, value):
     cursor = conn.cursor(dictionary=True)
+
+    song_ids = []
 
     if method == "artist_id":
         query = "SELECT song_id FROM songs WHERE artist_id = %s"

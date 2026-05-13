@@ -10,7 +10,7 @@
             if (res.ok) {
                 tracks = await res.json();
             }
-            await fetch("api/update-db");
+            await fetch("/api/update-db");
         } catch (e) {
             console.error("Failed to load recent tracks:", e);
         } finally {

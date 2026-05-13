@@ -58,7 +58,7 @@
             Ange ditt Last.fm-användarnamn för att se din statistik
         </p>
 
-        <div class="form">
+        <form class="form">
             <input
                 type="text"
                 bind:value={username}
@@ -74,10 +74,14 @@
             />
 
             <div class="button-group">
-                <button class="btn primary" onclick={handleLogin}>
+                <button class="btn primary" type="button" onclick={handleLogin}>
                     Log in
                 </button>
-                <button class="btn secondary" onclick={handleSignup}>
+                <button
+                    class="btn secondary"
+                    type="button"
+                    onclick={handleSignup}
+                >
                     Sign up
                 </button>
             </div>
@@ -85,7 +89,7 @@
             {#if error}
                 <p class="error">{error}</p>
             {/if}
-        </div>
+        </form>
     </div>
 </section>
 

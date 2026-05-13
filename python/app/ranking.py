@@ -30,7 +30,7 @@ def fetch_user_ranking(conn, user_id, artist_id):
     return results
 
 
-def get_global_ranking(conn, artist_id):
+def fetch_global_ranking(conn, artist_id):
     cursor = conn.cursor(dictionary=True)
     # Fetch top 10 from computed view
 

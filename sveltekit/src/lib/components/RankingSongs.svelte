@@ -17,6 +17,9 @@
                 encodeURIComponent(tracks_input) +
                 "&artist=" +
                 encodeURIComponent(artist),
+            {
+                credentials: "include",
+            },
         );
         tracks = await res.json();
     }
@@ -24,6 +27,9 @@
     async function fetchAllTracks() {
         const res = await fetch(
             "/api/fetch/tracks?artist=" + encodeURIComponent(artist),
+            {
+                credentials: "include",
+            },
         );
         tracks = await res.json();
     }
@@ -31,6 +37,9 @@
     async function loadExistingRanking() {
         const res1 = await fetch(
             "/api/fetch/artists/ids?artist=" + encodeURIComponent(artist),
+            {
+                credentials: "include",
+            },
         );
 
         if (!res1.ok) return;
@@ -40,7 +49,9 @@
 
         if (!artist_id) return;
 
-        const res2 = await fetch("/api/ranking/user?artist_id=" + artist_id);
+        const res2 = await fetch("/api/ranking/user?artist_id=" + artist_id, {
+            credentials: "include",
+        });
 
         if (!res2.ok) return;
 
@@ -91,6 +102,9 @@
 
         const res = await fetch(
             "/api/fetch/artists/ids?artist=" + encodeURIComponent(artist),
+            {
+                credentials: "include",
+            },
         );
         const artist_ids = await res.json();
         const artist_id = artist_ids[0];
@@ -104,6 +118,7 @@
                 artist_id: artist_id,
                 rankings: rankings,
             }),
+            credentials: "include",
         })
             .then((res) => res.json())
             .then((data) => {
