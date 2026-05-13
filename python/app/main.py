@@ -225,70 +225,77 @@ def update_db():
 
 @app.route("/fetch/tracks", methods=["GET"])
 def fetch_tracks():
-    artist = request.args.get(
-        "artist"
-    )  # pass either a artist or a track component in the uri
+    artist = request.args.get("artist")
     title = request.args.get("title")
 
     if not artist and not title:
         return jsonify([])
 
-    # Update everything here to be able to handle more song data like album covers, artist name etc
+    cursor = g.db.cursor(dictionary=True)
 
-    if artist and title:
-        artist_ids = db.fetch_artist_id(g.db, artist)
+    try:
+        query = """
+            SELECT 
+                s.song_id,
+                s.title,
+                s.artist_id,
+                a.artist_name,
+                s.extralarge,
+                s.large,
+                s.medium,
+                s.small
+            FROM songs s
+            JOIN artists a ON s.artist_id = a.artist_id
+        """
 
-        if artist_ids is None:
-            return jsonify([])
+        conditions = []
+        params = []
 
-        track_names = []
+        # WHERE conditions
+        if artist:
+            conditions.append("(a.artist_name = %s OR a.artist_name LIKE %s)")
+            params.extend([artist, f"%{artist}%"])
 
-        for artist_id in artist_ids:
-            track_ids = db.fetch_track_ids(g.db, "artist&title", [artist_id, title])
+        if title:
+            conditions.append("(s.title = %s OR s.title LIKE %s)")
+            params.extend([title, f"%{title}%"])
 
-            for id in track_ids:
-                track_name = db.fetch_track_name(g.db, id)
-                if track_name:
-                    track_names.append(track_name)
-    elif artist:
-        artist_ids = db.fetch_artist_id(g.db, artist)
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
 
-        if artist_ids is None:
-            return jsonify([])
+        # ORDER BY priority:
+        # 1. exact artist match
+        # 2. exact title match
+        # 3. then alphabetical
+        order_params = []
 
-        track_names = []
+        query += " ORDER BY "
 
-        for artist_id in artist_ids:
-            track_ids = db.fetch_track_ids(g.db, "artist_id", artist_id)
+        order_clauses = []
 
-            for id in track_ids:
-                track_name = db.fetch_track_name(g.db, id)
-                if track_name:
-                    track_names.append(track_name)
+        if artist:
+            order_clauses.append("(a.artist_name = %s) DESC")
+            order_params.append(artist)
 
-    elif title:
-        track_ids = db.fetch_track_ids(g.db, "title", title)
+        if title:
+            order_clauses.append("(s.title = %s) DESC")
+            order_params.append(title)
 
-        if track_ids is None:
-            return jsonify([])
+        order_clauses.append("s.title ASC")
 
-        track_names = []
+        order_clauses.append("LENGTH(s.title) ASC")
 
-        for track_id in track_ids:
-            track_name = db.fetch_track_name(g.db, track_id)
-            if track_name:
-                track_names.append(track_name)
+        query += ", ".join(order_clauses)
 
-    tracks_data = []
-    for track_name in track_names:
-        track_ids = db.fetch_track_ids(g.db, "title", track_name)
-        for track_id in track_ids:
-            if track_id:
-                track_data = db.fetch_track_data(g.db, track_id)
-                if track_data:
-                    tracks_data.append(track_data)
+        query += " LIMIT 100"
 
-    return jsonify(tracks_data)
+        cursor.execute(query, tuple(params + order_params))
+
+        results = cursor.fetchall()
+        return jsonify(results)
+
+    finally:
+        cursor.close()
 
 
 @app.route("/fetch/artists/names", methods=["GET"])
