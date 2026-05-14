@@ -14,7 +14,11 @@ import lastfm
 import db
 import ranking
 
-# Added the app secret key to the env file on home computer, not pushed to github so add it on c´school comp as well...
+'''
+command to dump the database:
+
+docker exec -i mariadb mariadb-dump -u root -p12345 --routines --events --triggers stattrack > ./db_init/schema.sql
+'''
 
 
 app = Flask(__name__)

@@ -17,7 +17,6 @@
 </script>
 
 <div class="full-page">
-    <Header />
     <main class="main-content">
         <div class="container">
             <div class="left-column">

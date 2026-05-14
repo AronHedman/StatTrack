@@ -30,7 +30,8 @@
 
         {#if menuState}
             <div class="burger-content">
-                <a href="#top" title="New Start">Top</a>
+                <a href="/newStart" title="New start">New start</a>
+                <a href="#top" title="Top">Top</a>
                 <a
                     id="logout"
                     href="javascript:void(0);"
@@ -55,7 +56,7 @@
 <style lang="scss">
     .header {
         width: 100%;
-        height: 64px;
+        height: 8vh;
         background: var(--bg-surface, #fff);
         border-bottom: 1px solid var(--border-subtle, #ccc);
         padding: 0 32px;
