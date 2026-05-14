@@ -175,12 +175,11 @@ def update_db():
     username = user["username"]
     user_id = db.fetch_user_id(g.db, username)
 
-    last_synced_raw = db.fetch_last_synced(g.db, user_id)
-    last_synced_datetime = last_synced_raw.isoformat() if last_synced_raw else None
-    new_last_synced = False
+    last_synced_datetime = db.fetch_last_synced(g.db, user_id)
 
     cursor = g.db.cursor(dictionary=True)
     page = 1
+
     try:
         while True:
             found_old_track = False
@@ -196,26 +195,37 @@ def update_db():
 
             if page == 1:
                 new_last_synced = tracks[0]["date_time"]
+                if isinstance(new_last_synced, str):
+                    from datetime import datetime
+
+                    new_last_synced = datetime.fromisoformat(new_last_synced)
 
             for track in tracks:
-                if last_synced_datetime and track["date_time"] == str(
-                    last_synced_datetime
-                ):
+                track_dt = track["date_time"]
+
+                if isinstance(track_dt, str):
+                    from datetime import datetime
+
+                    track_dt = datetime.fromisoformat(track_dt)
+
+                if last_synced_datetime and track_dt <= last_synced_datetime:
                     found_old_track = True
                     break
 
                 db.add_track(cursor, user_id, track)
 
             g.db.commit()
+
             if found_old_track:
                 break
 
             page += 1
 
-        if new_last_synced:
-            db.new_last_synced(g.db, user_id, new_last_synced)
+            if new_last_synced:
+                db.new_last_synced(g.db, user_id, new_last_synced)
+
     except Exception as e:
-        g.db.rollback()  # to avoid committing a faulty dataset
+        g.db.rollback()
         return jsonify({"error": str(e)}), 500
     finally:
         cursor.close()

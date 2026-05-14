@@ -21,7 +21,15 @@
     <main class="main-content">
         <div class="container">
             <!-- Main Content, add bars with artist streams, add stats for the player, like most streamed artists and songs etc -->
-            <div class="content">Testdiv</div>
+            <div class="left-container">
+                <div class="content">Ranking songs</div>
+                <div class="content">recent streams</div>
+            </div>
+            <div class="right-container">
+                <div class="slider">Most streamed artists</div>
+                <div class="slider">Most streamed songs</div>
+                <div class="slider">Global rankings</div>
+            </div>
         </div>
     </main>
 </div>

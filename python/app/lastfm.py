@@ -1,10 +1,8 @@
 import os
 import requests
-import json
 import re
 from dotenv import load_dotenv
-from datetime import datetime
-import db
+from datetime import datetime, timezone
 
 load_dotenv()
 API_KEY = os.getenv("LASTFM_API_KEY")
@@ -15,13 +13,16 @@ def verify_user(username):
     params = {
         "method": "user.getinfo",
         "user": username,
-        "api_key": os.getenv("LASTFM_API_KEY"),
+        "api_key": API_KEY,
         "format": "json",
     }
-    response = requests.get(url, params=params)
-    if response.status_code == 200:
+
+    try:
+        response = requests.get(url, params=params)
+        response.raise_for_status()
         return response.json().get("user")
-    return None
+    except Exception:
+        return None
 
 
 def fetch_recent_tracks(username, limit, page):
@@ -46,76 +47,86 @@ def fetch_recent_tracks(username, limit, page):
 
 
 def clean_track_title(title):
-    patterns = [  # regex
+    patterns = [
         r"\s*[\(\-\[].*?(?:remaster|remastered|remix|version|live|deluxe|anniversary|with|edit|bonus|radio|feat).*",
-        r"\s*[\(\-\[].*?\d{4}.*?[\)\]]?",  # Catches years like (2004) or - 2012
+        r"\s*[\(\-\[].*?\d{4}.*?[\)\]]?",
     ]
 
     clean_title = title
     for pattern in patterns:
-        # flags=re.IGNORECASE ensures "REMIX" and "remix" are both caught
         clean_title = re.sub(pattern, "", clean_title, flags=re.IGNORECASE)
 
     return clean_title.strip()
 
 
-def format_time(time):
-    # 18 Mar 2026, 14:35
+def parse_uts(track):
+    """
+    Convert Last.fm UTS → UTC datetime
+    """
+    uts = track.get("date", {}).get("uts")
+
+    if not uts:
+        return None
+
     try:
-        dt = datetime.strptime(time, "%d %b %Y, %H:%M")
-
-        # ISO 8601 string (2026-03-18T14:35:00)
-        return dt.isoformat()
-    except ValueError:
-
+        return datetime.fromtimestamp(int(uts), tz=timezone.utc)
+    except Exception:
         return None
 
 
+def extract_images(track):
+    images = {
+        "small": None,
+        "medium": None,
+        "large": None,
+        "extralarge": None,
+    }
+
+    track_images = track.get("image")
+
+    if isinstance(track_images, list):
+        for img in track_images:
+            size = img.get("size")
+            url = img.get("#text")
+            if size in images and url:
+                images[size] = url
+
+    return images
+
+
 def process_data(api_return):
-    array = []
+    result = []
+
     for track in api_return:
-        if track.get("@attr") and track.get("@attr").get("nowplaying") == "true":
+        # Skip currently playing (no timestamp)
+        if track.get("@attr", {}).get("nowplaying") == "true":
             continue
 
-        if track.get("artist") and track.get("artist").get("#text") != None:
-            artist = track.get("artist").get("#text")
-        else:
+        artist = track.get("artist", {}).get("#text")
+        title = track.get("name")
+
+        if not artist or not title:
             continue
 
-        if track.get("name") != None:
-            title = track.get("name")
-        else:
+        dt = parse_uts(track)
+        if not dt:
             continue
 
-        if track.get("date") and track.get("date").get("#text") != None:
-            date_time = track.get("date").get("#text")
-        else:
-            continue
+        images = extract_images(track)
 
-        clean_title = clean_track_title(title)
-        timestamp = format_time(date_time)
-
-        images = {}
-        track_images = track.get("image")
-        if isinstance(track_images, list):
-            for img in track_images:
-                size = img.get("size")
-                url = img.get("#text")
-                if size and url:
-                    images[size] = url
-
-        if timestamp == None:
-            continue
-
-        array.append(
+        result.append(
             {
                 "artist": artist,
-                "title_cleaned": clean_title,
+                "title_cleaned": clean_track_title(title),
                 "title_original": title,
-                "date_time": timestamp,
-                "images": images,
-                "original_structure": track,
+                "date_time": dt,
+                "small": images["small"],
+                "medium": images["medium"],
+                "large": images["large"],
+                "extralarge": images["extralarge"],
             }
         )
 
-    return array
+    result.sort(key=lambda x: x["date_time"], reverse=True)
+
+    return result
