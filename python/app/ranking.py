@@ -22,7 +22,25 @@ def save_user_ranking(conn, user_id, artist_id, rankings):
 def fetch_user_ranking(conn, user_id, artist_id):
     cursor = conn.cursor(dictionary=True)
 
-    query = "SELECT song_id, rank FROM user_artist_rankings WHERE user_id = %s AND artist_id = %s"
+    query = """
+        SELECT 
+            r.song_id,
+            r.rank,
+            s.title,
+            s.artist_id,
+            a.artist_name,
+            s.extralarge,
+            s.large,
+            s.medium,
+            s.small
+        FROM user_artist_rankings r
+        JOIN songs s ON s.song_id = r.song_id
+        JOIN artists a ON a.artist_id = s.artist_id
+        WHERE r.user_id = %s
+          AND r.artist_id = %s
+        ORDER BY r.rank ASC
+    """
+
     cursor.execute(query, (user_id, artist_id))
     results = cursor.fetchall()
     cursor.close()

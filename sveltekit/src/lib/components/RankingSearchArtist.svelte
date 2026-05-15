@@ -14,8 +14,7 @@
         isLoading = true;
         try {
             const res = await fetch(
-                "/api/fetch/artists/names?artist=" +
-                    encodeURIComponent(artist_input),
+                "/api/fetch/artists?artist=" + encodeURIComponent(artist_input),
                 {
                     credentials: "include",
                 },
@@ -63,13 +62,14 @@
     {:else if artists.length > 0}
         <div class="results-container">
             <ul class="artist-list">
-                {#each artists as artist_name}
+                {#each artists as artist}
                     <li class="artist-item">
                         <button
                             class="reset artist-button"
-                            onclick={() => clickArtist(artist_name)}
+                            onclick={() => clickArtist(artist)}
                         >
-                            <span class="artist-name">{artist_name}</span>
+                            <span class="artist-name">{artist.artist_name}</span
+                            >
                             <span class="arrow">&rarr;</span>
                         </button>
                     </li>

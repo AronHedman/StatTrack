@@ -1,7 +1,7 @@
 import os
 from flask import Flask, redirect, request, session, jsonify, g
 from flask_cors import CORS
-from datetime import timedelta
+from datetime import timedelta, datetime
 import requests
 import json
 import traceback
@@ -25,8 +25,6 @@ app = Flask(__name__)
 app.secret_key = os.environ.get(
     "APP_SECRET", "dev-secret-key-change-me"
 )  # change to ("SECRET_KEY", os.urandom(32)) when actually implemenmts a env var for SECRET_KEY
-
-"dev-secret-key-change-me"
 
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
@@ -80,6 +78,12 @@ def me():
 
     return jsonify({"authenticated": True, "user": user})
 
+def get_current_user():
+    user = session.get("user")
+    if not user:
+        return None, None
+    return user["user_id"], user["username"]
+
 
 @app.route("/login", methods=["POST"])
 def handle_login():
@@ -96,7 +100,8 @@ def handle_login():
     if user_info:
         if login.verify_user(g.db, username, password):
             session.permanent = True
-            session["user"] = {"username": user_info["name"]}
+            user_id=db.fetch_user_id(g.db, username)
+            session["user"] = {"username": user_info["name"], "user_id": user_id}
             return jsonify({"success": True})
         else:
             return (
@@ -136,7 +141,8 @@ def handle_signup():
         else:
             login.new_user(g.db, username, password)
             session.permanent = True
-            session["user"] = {"username": user_info["name"]}
+            user_id=db.fetch_user_id(g.db, username)
+            session["user"] = {"username": user_info["name"], "user_id": user_id}
             return jsonify({"success": True})
 
     else:
@@ -156,11 +162,9 @@ def callback():
 
 @app.route("/fetch-recent")
 def get_stats():
-    user = session.get("user")
-    if not user:
-        return jsonify({"error": "Inte inloggad"}), 401
-
-    username = user["username"]
+    user_id, username = get_current_user()
+    if not user_id:
+        return jsonify({"error": "Not logged in"}), 401
     tracks = lastfm.fetch_recent_tracks(username, 50, 1)
 
     if tracks is None:
@@ -172,12 +176,9 @@ def get_stats():
 
 @app.route("/update-db")
 def update_db():
-    user = session.get("user")
-    if not user:
-        return jsonify({"error": "Inte inloggad"}), 401
-
-    username = user["username"]
-    user_id = db.fetch_user_id(g.db, username)
+    user_id, username = get_current_user()
+    if not user_id:
+        return jsonify({"error": "Not logged in"}), 401
 
     last_synced_datetime = db.fetch_last_synced(g.db, user_id)
 
@@ -200,16 +201,12 @@ def update_db():
             if page == 1:
                 new_last_synced = tracks[0]["date_time"]
                 if isinstance(new_last_synced, str):
-                    from datetime import datetime
-
                     new_last_synced = datetime.fromisoformat(new_last_synced)
 
             for track in tracks:
                 track_dt = track["date_time"]
 
                 if isinstance(track_dt, str):
-                    from datetime import datetime
-
                     track_dt = datetime.fromisoformat(track_dt)
 
                 if last_synced_datetime and track_dt <= last_synced_datetime:
@@ -240,16 +237,18 @@ def update_db():
 @app.route("/fetch/tracks", methods=["GET"])
 def fetch_tracks():
     artist = request.args.get("artist")
+    artist_id = request.args.get("artist_id")
     title = request.args.get("title")
+    song_id = request.args.get("song_id")
 
-    if not artist and not title:
+    if not artist and not title and not artist_id and not song_id:
         return jsonify([])
 
     cursor = g.db.cursor(dictionary=True)
 
     try:
         query = """
-            SELECT 
+            SELECT
                 s.song_id,
                 s.title,
                 s.artist_id,
@@ -262,97 +261,109 @@ def fetch_tracks():
             JOIN artists a ON s.artist_id = a.artist_id
         """
 
-        conditions = []
-        params = []
+        conditions = []  #adds WHERE conditions
+        params = [] #adds params %s for each condition
 
-        # WHERE conditions
         if artist:
             conditions.append("(a.artist_name = %s OR a.artist_name LIKE %s)")
             params.extend([artist, f"%{artist}%"])
+
+        if artist_id:
+            conditions.append("s.artist_id = %s")
+            params.append(artist_id)
 
         if title:
             conditions.append("(s.title = %s OR s.title LIKE %s)")
             params.extend([title, f"%{title}%"])
 
+        if song_id:
+            conditions.append("s.song_id = %s")
+            params.append(song_id)
+
         if conditions:
-            query += " WHERE " + " AND ".join(conditions)
+            query += " WHERE " + " AND ".join(conditions)  # add WHERE and then joins the conditions with AND as the separator
 
-        # ORDER BY priority:
-        # 1. exact artist match
-        # 2. exact title match
-        # 3. then alphabetical
-        order_params = []
+        query += " ORDER BY s.title ASC, LENGTH(s.title) ASC LIMIT 100"
 
-        query += " ORDER BY "
-
-        order_clauses = []
-
-        if artist:
-            order_clauses.append("(a.artist_name = %s) DESC")
-            order_params.append(artist)
-
-        if title:
-            order_clauses.append("(s.title = %s) DESC")
-            order_params.append(title)
-
-        order_clauses.append("s.title ASC")
-
-        order_clauses.append("LENGTH(s.title) ASC")
-
-        query += ", ".join(order_clauses)
-
-        query += " LIMIT 100"
-
-        cursor.execute(query, tuple(params + order_params))
-
+        cursor.execute(query, tuple(params))
         results = cursor.fetchall()
         return jsonify(results)
 
     finally:
         cursor.close()
+   
 
 
-@app.route("/fetch/artists/names", methods=["GET"])
-def fetch_artists_names():
+@app.route("/fetch/artists", methods=["GET"])
+def fetch_artists():
     artist = request.args.get("artist")
 
     if not artist:
         return jsonify([])
 
-    artist_ids = db.fetch_artist_id(g.db, artist)
+    artists = db.fetch_artist(g.db, artist)
 
-    if artist_ids is None:
+    if artists is None:
         return jsonify([])
 
-    artist_names = []
-    for artist_id in artist_ids:
-        artist_name = db.fetch_artist_name(g.db, artist_id)
-        if artist_name:
-            artist_names.append(artist_name)
-
-    return jsonify(artist_names)
+    return jsonify(artists)
 
 
-@app.route("/fetch/artists/ids", methods=["GET"])
-def fetch_artist_ids():
-    artist = request.args.get("artist")
+@app.route("/fetchtop/artist")
+def fetchtop_artist():
+    user_id, username = get_current_user()
+    if not user_id:
+        return jsonify({"error": "Not logged in"}), 401
+    
+    artist_id = request.args.get("artist_id")
 
-    if not artist:
+    if not artist_id:
         return jsonify([])
 
-    artist_ids = db.fetch_artist_id(g.db, artist)
+    cursor = g.db.cursor(dictionary=True)
+    
+    try:
+        query = "SELECT song_id FROM user_artist_stats WHERE user_id = %s AND artist_id = %s ORDER BY stream_count DESC LIMIT 5"
+        cursor.execute(query, (user_id, artist_id))
 
-    if not artist_ids:
+        results = cursor.fetchall()
+        return jsonify(results)
+    except Exception as e:
+        g.db.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+
+@app.route("/fetchtop/song")
+def fetchtop_song():
+    user_id, username = get_current_user()
+    if not user_id:
+        return jsonify({"error": "Not logged in"}), 401
+    
+    song_id = request.args.get("song_id")
+
+    if not song_id:
         return jsonify([])
 
-    return jsonify(artist_ids)
+    cursor = g.db.cursor(dictionary=True)
+    try:
+        query = "SELECT song_id FROM user_song_stats WHERE user_id = %s AND song_id = %s ORDER BY stream_count DESC LIMIT 5"
+        cursor.execute(query, (user_id, song_id))
+
+        results = cursor.fetchall()
+        return jsonify(results)
+    except Exception as e:
+        g.db.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
 
 
 @app.route("/ranking/user", methods=["POST"])
 def save_ranking():
-    user = session.get("user")
-    if not user:
-        return jsonify({"error": "Inte inloggad"}), 401
+    user_id, username = get_current_user()
+    if not user_id:
+        return jsonify({"error": "Not logged in"}), 401
 
     data = request.json
     artist_id = data.get("artist_id")
@@ -365,10 +376,7 @@ def save_ranking():
             jsonify({"error": "Missing artist_id or wrong ranking format"}),
             400,
         )
-
-    username = user["username"]
-    user_id = db.fetch_user_id(g.db, username)
-
+    
     try:
         ranking.save_user_ranking(g.db, user_id, artist_id, rankings)
         return jsonify({"success": True, "message": "Ranking saved successfully"})
@@ -378,28 +386,18 @@ def save_ranking():
 
 @app.route("/ranking/user", methods=["GET"])
 def get_user_ranking():
-    user = session.get("user")
-    if not user:
-        return jsonify({"error": "Inte inloggad"}), 401
+    user_id, username = get_current_user()
+    if not user_id:
+        return jsonify({"error": "Not logged in"}), 401
 
     artist_id = request.args.get("artist_id")
     if not artist_id:
         return jsonify({"error": "Missing artist_id parameter"}), 400
 
-    username = user["username"]
-    user_id = db.fetch_user_id(g.db, username)
-
     try:
         rankings = ranking.fetch_user_ranking(g.db, user_id, artist_id)
 
-        hydrated = []
-        for item in rankings:
-            track = db.fetch_track_data(g.db, item["song_id"])
-            if track:
-                track["rank"] = item["rank"]
-                hydrated.append(track)
-
-        return jsonify(hydrated)
+        return jsonify(rankings)
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500

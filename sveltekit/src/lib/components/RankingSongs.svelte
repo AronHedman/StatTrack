@@ -15,8 +15,8 @@
         const res = await fetch(
             "/api/fetch/tracks?title=" +
                 encodeURIComponent(tracks_input) +
-                "&artist=" +
-                encodeURIComponent(artist),
+                "&artist_id=" +
+                encodeURIComponent(artist.artist_id),
             {
                 credentials: "include",
             },
@@ -26,7 +26,8 @@
 
     async function fetchAllTracks() {
         const res = await fetch(
-            "/api/fetch/tracks?artist=" + encodeURIComponent(artist),
+            "/api/fetch/tracks?artist_id=" +
+                encodeURIComponent(artist.artist_id),
             {
                 credentials: "include",
             },
@@ -36,7 +37,7 @@
 
     async function loadExistingRanking() {
         const res1 = await fetch(
-            "/api/fetch/artists/ids?artist=" + encodeURIComponent(artist),
+            "/api/fetch/artists?artist=" + encodeURIComponent(artist),
             {
                 credentials: "include",
             },
@@ -101,13 +102,14 @@
         }
 
         const res = await fetch(
-            "/api/fetch/artists/ids?artist=" + encodeURIComponent(artist),
+            "/api/fetch/artists?artist=" +
+                encodeURIComponent(artist.artist_name),
             {
                 credentials: "include",
             },
         );
-        const artist_ids = await res.json();
-        const artist_id = artist_ids[0];
+        const results = await res.json();
+        const artist_id = results[0].artist_id;
 
         fetch("/api/ranking/user", {
             method: "POST",
@@ -156,7 +158,7 @@
         <button class="back-button" onclick={onBack}>
             &larr; Back to Search
         </button>
-        <h2 class="section-title">Rank your top 10 for {artist}</h2>
+        <h2 class="section-title">Rank your top 10 for {artist.artist_name}</h2>
     </div>
 
     <div class="track-search">

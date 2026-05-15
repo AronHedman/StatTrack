@@ -75,23 +75,23 @@ def fetch_last_synced(conn, user_id):
     return last_synced_datetime
 
 
-def fetch_artist_id(conn, artist):
+def fetch_artist(conn, artist):
     cursor = conn.cursor(dictionary=True)
 
-    query = "SELECT artist_id FROM artists WHERE artist_name = %s"
+    query = "SELECT artist_id, artist_name FROM artists WHERE artist_name = %s"
     cursor.execute(query, (artist,))
     exact_result = cursor.fetchone()
 
     if exact_result:
         cursor.close()
-        return [exact_result["artist_id"]]
+        return [exact_result]
 
-    query_partial = "SELECT artist_id FROM artists WHERE artist_name LIKE %s"
+    query_partial = "SELECT artist_id, artist_name FROM artists WHERE artist_name LIKE %s"
     cursor.execute(query_partial, (f"%{artist}%",))
     results = cursor.fetchall()
-    cursor.close()
 
-    return [row["artist_id"] for row in results]
+    cursor.close()
+    return results
 
 
 def fetch_track_ids(conn, method, value):
