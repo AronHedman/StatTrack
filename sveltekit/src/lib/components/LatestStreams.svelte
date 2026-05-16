@@ -20,7 +20,7 @@
 </script>
 
 <section class="latest-streams">
-    <h2 class="section-title">Dina senaste låtar</h2>
+    <h2 class="section-title">Your recent tracks</h2>
 
     <div class="content custom-scrollbar">
         {#if isLoading}

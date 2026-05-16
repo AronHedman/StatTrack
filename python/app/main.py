@@ -13,6 +13,7 @@ import login
 import lastfm
 import db
 import ranking
+import helpers as h
 
 '''
 command to dump the database:
@@ -180,10 +181,11 @@ def update_db():
     if not user_id:
         return jsonify({"error": "Not logged in"}), 401
 
-    last_synced_datetime = db.fetch_last_synced(g.db, user_id)
+    last_synced_datetime = h.ensure_utc(db.fetch_last_synced(g.db, user_id))
 
     cursor = g.db.cursor(dictionary=True)
     page = 1
+    new_last_synced = None
 
     try:
         while True:
@@ -194,26 +196,22 @@ def update_db():
                 break
 
             tracks = lastfm.process_data(raw_tracks)
-
             if not tracks:
                 break
 
             if page == 1:
                 new_last_synced = tracks[0]["date_time"]
-                if isinstance(new_last_synced, str):
-                    new_last_synced = datetime.fromisoformat(new_last_synced)
 
             for track in tracks:
-                track_dt = track["date_time"]
-
-                if isinstance(track_dt, str):
-                    track_dt = datetime.fromisoformat(track_dt)
+                track_dt = h.ensure_utc(track["date_time"])
 
                 if last_synced_datetime and track_dt <= last_synced_datetime:
                     found_old_track = True
                     break
 
-                db.add_track(cursor, user_id, track)
+                track_to_store = dict(track)
+                track_to_store["date_time"] = h.to_db_utc(track_dt)
+                db.add_track(cursor, user_id, track_to_store)
 
             g.db.commit()
 
@@ -222,8 +220,8 @@ def update_db():
 
             page += 1
 
-            if new_last_synced:
-                db.new_last_synced(g.db, user_id, new_last_synced)
+        if new_last_synced:
+            db.new_last_synced(g.db, user_id, h.to_db_utc(new_last_synced))
 
     except Exception as e:
         g.db.rollback()
@@ -309,54 +307,82 @@ def fetch_artists():
     return jsonify(artists)
 
 
-@app.route("/fetchtop/artist")
-def fetchtop_artist():
+@app.route("/fetchtop/artists")
+def fetchtop_artists():
+    user_id, username = get_current_user()
+    if not user_id:
+        return jsonify({"error": "Not logged in"}), 401
+
+    cursor = g.db.cursor(dictionary=True)
+
+    try:
+        query = """
+        SELECT uas.artist_id, uas.stream_count, a.artist_name
+        FROM user_artist_stats uas
+        JOIN artists a ON a.artist_id = uas.artist_id
+        WHERE user_id = %s
+        ORDER BY stream_count DESC LIMIT 5
+        """
+        cursor.execute(query, (user_id,))
+
+        results = cursor.fetchall()
+        return jsonify(results)
+    except Exception as e:
+        g.db.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+ 
+
+@app.route("/fetchtop/songs")
+def fetchtop_songs():
     user_id, username = get_current_user()
     if not user_id:
         return jsonify({"error": "Not logged in"}), 401
     
     artist_id = request.args.get("artist_id")
 
+    cursor = g.db.cursor(dictionary=True)
+
     if not artist_id:
-        return jsonify([])
+        try:
+            query = """
+                SELECT uss.song_id, uss.stream_count, s.title, s.artist_id, a.artist_name, s.extralarge 
+                FROM user_song_stats uss
+                JOIN songs s ON s.song_id = uss.song_id
+                JOIN artists a ON a.artist_id = s.artist_id
+                WHERE user_id = %s 
+                ORDER BY stream_count DESC LIMIT 5
+            """
+            cursor.execute(query, (user_id,))
 
-    cursor = g.db.cursor(dictionary=True)
-    
-    try:
-        query = "SELECT song_id FROM user_artist_stats WHERE user_id = %s AND artist_id = %s ORDER BY stream_count DESC LIMIT 5"
-        cursor.execute(query, (user_id, artist_id))
+            results = cursor.fetchall()
+            return jsonify(results)
+        except Exception as e:
+            g.db.rollback()
+            return jsonify({"error": str(e)}), 500
+        finally:
+            cursor.close()
+    else:
+        try:
+            query = """
+                SELECT uss.song_id, uss.stream_count, s.title, s.artist_id, a.artist_name, s.extralarge 
+                FROM user_song_stats uss
+                JOIN songs s ON s.song_id = uss.song_id
+                JOIN artists a ON a.artist_id = s.artist_id
+                WHERE user_id = %s and s.artist_id = %s
+                ORDER BY stream_count DESC LIMIT 5
+            """
+            cursor.execute(query, (user_id, artist_id))
 
-        results = cursor.fetchall()
-        return jsonify(results)
-    except Exception as e:
-        g.db.rollback()
-        return jsonify({"error": str(e)}), 500
-    finally:
-        cursor.close()
+            results = cursor.fetchall()
+            return jsonify(results)
+        except Exception as e:
+            g.db.rollback()
+            return jsonify({"error": str(e)}), 500
+        finally:
+            cursor.close()
 
-@app.route("/fetchtop/song")
-def fetchtop_song():
-    user_id, username = get_current_user()
-    if not user_id:
-        return jsonify({"error": "Not logged in"}), 401
-    
-    song_id = request.args.get("song_id")
-
-    if not song_id:
-        return jsonify([])
-
-    cursor = g.db.cursor(dictionary=True)
-    try:
-        query = "SELECT song_id FROM user_song_stats WHERE user_id = %s AND song_id = %s ORDER BY stream_count DESC LIMIT 5"
-        cursor.execute(query, (user_id, song_id))
-
-        results = cursor.fetchall()
-        return jsonify(results)
-    except Exception as e:
-        g.db.rollback()
-        return jsonify({"error": str(e)}), 500
-    finally:
-        cursor.close()
 
 
 @app.route("/ranking/user", methods=["POST"])

@@ -4,6 +4,8 @@ import re
 from dotenv import load_dotenv
 from datetime import datetime, timezone
 
+import helpers as h
+
 load_dotenv()
 API_KEY = os.getenv("LASTFM_API_KEY")
 
@@ -59,21 +61,6 @@ def clean_track_title(title):
     return clean_title.strip()
 
 
-def parse_uts(track):
-    """
-    Convert Last.fm UTS → UTC datetime
-    """
-    uts = track.get("date", {}).get("uts")
-
-    if not uts:
-        return None
-
-    try:
-        return datetime.fromtimestamp(int(uts), tz=timezone.utc)
-    except Exception:
-        return None
-
-
 def extract_images(track):
     images = {
         "small": None,
@@ -108,7 +95,7 @@ def process_data(api_return):
         if not artist or not title:
             continue
 
-        dt = parse_uts(track)
+        dt = h.parse_uts(track)
         if not dt:
             continue
 

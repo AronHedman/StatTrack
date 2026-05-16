@@ -26,11 +26,10 @@
     <h1 class="header-title">StatTrack</h1>
 
     <div class="burger-container">
-        <a href="/" class="active" title="Home">Hem</a>
+        <a href="/" class="active" title="Home">Home</a>
 
         {#if menuState}
             <div class="burger-content">
-                <a href="/newStart" title="New start">New start</a>
                 <a href="#top" title="Top">Top</a>
                 <a
                     id="logout"
