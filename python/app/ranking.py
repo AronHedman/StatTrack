@@ -48,12 +48,36 @@ def fetch_user_ranking(conn, user_id, artist_id):
     return results
 
 
-def fetch_global_ranking(conn, artist_id):
+def fetch_global_ranking(conn, artist_id, limit):
     cursor = conn.cursor(dictionary=True)
     # Fetch top 10 from computed view
 
-    query = "SELECT song_id, title, quality_score FROM global_artist_rankings WHERE artist_id = %s LIMIT 10"
-    cursor.execute(query, (artist_id,))
-    results = cursor.fetchall()
-    cursor.close()
-    return results
+    if limit == None or limit <= 0:
+        limit = 5
+
+    if artist_id is None:
+        query = """
+        SELECT gar.song_id, gar.artist_id, gar.title, gar.quality_score 
+        FROM global_artist_rankings gar 
+        JOIN songs s ON s.song_id = gar.song_id
+        SORT BY gar.quality_score DESC
+        LIMIT %s
+        """
+
+        cursor.execute(query, (limit,))
+        results = cursor.fetchall()
+        cursor.close()
+        return results
+    else:
+        query = """
+        SELECT gar.song_id, gar.artist_id, gar.title, gar.quality_score 
+        FROM global_artist_rankings gar 
+        WHERE gar.artist_id = %s
+        JOIN songs s ON s.song_id = gar.song_id
+        SORT BY gar.quality_score DESC
+        LIMIT %s
+        """
+        cursor.execute(query, (artist_id, limit))
+        results = cursor.fetchall()
+        cursor.close()
+        return results

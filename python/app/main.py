@@ -441,11 +441,8 @@ def get_user_ranking():
 def get_global_ranking():
     artist_id = request.args.get("artist_id")
 
-    if not artist_id:
-        return jsonify({"error": "Missing artist_id parameter"}), 400
-
     try:
-        results = ranking.fetch_global_ranking(g.db, artist_id)
+        results = ranking.fetch_global_ranking(g.db, artist_id, 5)
         return jsonify(results)
     except Exception as e:
         return jsonify({"error": str(e)}), 500

@@ -6,6 +6,7 @@
 
     let artists = $state([]);
     let songs = $state([]);
+    let rankingGlobal = $state([]);
 
     function toRanking() {
         window.location.replace("/ranking");
@@ -33,6 +34,18 @@
         }
 
         songs = await res.json();
+    }
+
+    async function fetchGlobalRanking() {
+        const res = await fetch("/api/ranking/global", {
+            credentials: "include",
+        });
+
+        if (!res.ok) {
+            window.location.replace("/login");
+        }
+
+        rankingGlobal = await res.json();
     }
 
     onMount(async () => {
@@ -95,7 +108,16 @@
 
                 <div class="container">
                     <h2 class="section-title">Global rankings</h2>
-                    <div class="sub-container"></div>
+                    <div class="sub-container">
+                        {#each rankingGlobal as song}
+                            <Card
+                                title1={song.title}
+                                title2={song.artist_name}
+                                backgroundImage={song.artist_image}
+                                info={song.quality_score}
+                            />
+                        {/each}
+                    </div>
                 </div>
             </div>
         </div>
@@ -197,12 +219,15 @@
 
     .sub-container {
         width: 100%;
-        aspect-ratio: 1 / 1;
+        min-width: 0;
         min-height: 0;
         display: grid;
         grid-template-columns: repeat(5, minmax(0, 1fr));
+        grid-auto-rows: minmax(0, 1fr);
         gap: 16px;
-        align-items: start;
+        align-items: stretch;
+        overflow: hidden;
+        aspect-ratio: auto;
     }
 
     #ranking-card:hover {
