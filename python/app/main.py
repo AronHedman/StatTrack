@@ -15,11 +15,11 @@ import db
 import ranking
 import helpers as h
 
-'''
+"""
 command to dump the database:
 
 docker exec -i mariadb mariadb-dump -u root -p12345 --routines --events --triggers stattrack > ./db_init/schema.sql
-'''
+"""
 
 
 app = Flask(__name__)
@@ -73,16 +73,24 @@ def handle_exception(e):
 
 @app.route("/me", methods=["GET"])  # returns user information on the current user
 def me():
-    user = session.get("user")
-    if not user:
+    user = session.get("user") or {}
+    if user == {}:
+        return jsonify({"authenticated": False}), 401
+    if not user["user_id"] or not user["username"]:
+        session.clear()
         return jsonify({"authenticated": False}), 401
 
     return jsonify({"authenticated": True, "user": user})
 
+
 def get_current_user():
-    user = session.get("user")
-    if not user:
-        return None, None
+    user = session.get("user") or {}
+    if user == {}:
+        return jsonify({"authenticated": False}), 401
+    if not user["user_id"] or not user["username"]:
+        session.clear()
+        return jsonify({"authenticated": False}), 401
+
     return user["user_id"], user["username"]
 
 
@@ -101,7 +109,7 @@ def handle_login():
     if user_info:
         if login.verify_user(g.db, username, password):
             session.permanent = True
-            user_id=db.fetch_user_id(g.db, username)
+            user_id = db.fetch_user_id(g.db, username)
             session["user"] = {"username": user_info["name"], "user_id": user_id}
             return jsonify({"success": True})
         else:
@@ -142,7 +150,7 @@ def handle_signup():
         else:
             login.new_user(g.db, username, password)
             session.permanent = True
-            user_id=db.fetch_user_id(g.db, username)
+            user_id = db.fetch_user_id(g.db, username)
             session["user"] = {"username": user_info["name"], "user_id": user_id}
             return jsonify({"success": True})
 
@@ -259,8 +267,8 @@ def fetch_tracks():
             JOIN artists a ON s.artist_id = a.artist_id
         """
 
-        conditions = []  #adds WHERE conditions
-        params = [] #adds params %s for each condition
+        conditions = []  # adds WHERE conditions
+        params = []  # adds params %s for each condition
 
         if artist:
             conditions.append("(a.artist_name = %s OR a.artist_name LIKE %s)")
@@ -279,7 +287,9 @@ def fetch_tracks():
             params.append(song_id)
 
         if conditions:
-            query += " WHERE " + " AND ".join(conditions)  # add WHERE and then joins the conditions with AND as the separator
+            query += " WHERE " + " AND ".join(
+                conditions
+            )  # add WHERE and then joins the conditions with AND as the separator
 
         query += " ORDER BY s.title ASC, LENGTH(s.title) ASC LIMIT 100"
 
@@ -289,7 +299,6 @@ def fetch_tracks():
 
     finally:
         cursor.close()
-   
 
 
 @app.route("/fetch/artists", methods=["GET"])
@@ -332,14 +341,14 @@ def fetchtop_artists():
         return jsonify({"error": str(e)}), 500
     finally:
         cursor.close()
- 
+
 
 @app.route("/fetchtop/songs")
 def fetchtop_songs():
     user_id, username = get_current_user()
     if not user_id:
         return jsonify({"error": "Not logged in"}), 401
-    
+
     artist_id = request.args.get("artist_id")
 
     cursor = g.db.cursor(dictionary=True)
@@ -384,7 +393,6 @@ def fetchtop_songs():
             cursor.close()
 
 
-
 @app.route("/ranking/user", methods=["POST"])
 def save_ranking():
     user_id, username = get_current_user()
@@ -402,7 +410,7 @@ def save_ranking():
             jsonify({"error": "Missing artist_id or wrong ranking format"}),
             400,
         )
-    
+
     try:
         ranking.save_user_ranking(g.db, user_id, artist_id, rankings)
         return jsonify({"success": True, "message": "Ranking saved successfully"})
