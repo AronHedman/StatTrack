@@ -37,7 +37,7 @@ def fetch_user_ranking(conn, user_id, artist_id):
         JOIN songs s ON s.song_id = r.song_id
         JOIN artists a ON a.artist_id = s.artist_id
         WHERE r.user_id = %s
-          AND r.artist_id = %s
+        AND r.artist_id = %s
         ORDER BY r.rank ASC
     """
 
@@ -57,10 +57,11 @@ def fetch_global_ranking(conn, artist_id, limit):
 
     if artist_id is None:
         query = """
-        SELECT gar.song_id, gar.artist_id, gar.title, gar.quality_score 
+        SELECT gar.song_id, gar.artist_id, gar.title, gar.quality_score, s.extralarge, a.artist_name 
         FROM global_artist_rankings gar 
         JOIN songs s ON s.song_id = gar.song_id
-        SORT BY gar.quality_score DESC
+        JOIN artists a ON a.artist_id = s.artist_id
+        ORDER BY gar.quality_score DESC
         LIMIT %s
         """
 
@@ -70,11 +71,12 @@ def fetch_global_ranking(conn, artist_id, limit):
         return results
     else:
         query = """
-        SELECT gar.song_id, gar.artist_id, gar.title, gar.quality_score 
+        SELECT gar.song_id, gar.artist_id, gar.title, gar.quality_score, s.extralarge, a.artist_name 
         FROM global_artist_rankings gar 
-        WHERE gar.artist_id = %s
         JOIN songs s ON s.song_id = gar.song_id
-        SORT BY gar.quality_score DESC
+        JOIN artists a ON a.artist_id = s.artist_id
+        WHERE gar.artist_id = %s
+        ORDER BY gar.quality_score DESC
         LIMIT %s
         """
         cursor.execute(query, (artist_id, limit))

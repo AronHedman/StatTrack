@@ -50,17 +50,15 @@
         <input
             type="text"
             bind:value={artist_input}
-            placeholder="Search for an artist..."
+            placeholder="Search for an artist"
             class="search-input"
         />
     </div>
 
-    {#if isLoading}
-        <div class="empty-state">
-            <span class="loading-text">Searching...</span>
-        </div>
-    {:else if artists.length > 0}
-        <div class="results-container">
+    <div class="results-container custom-scrollbar">
+        {#if isLoading}
+            <div class="loading-state">Searching...</div>
+        {:else if artists.length > 0}
             <ul class="artist-list">
                 {#each artists as artist}
                     <li class="artist-item">
@@ -68,36 +66,35 @@
                             class="reset artist-button"
                             onclick={() => clickArtist(artist)}
                         >
-                            <span class="artist-name">{artist.artist_name}</span
-                            >
+                            <span class="artist-name"
+                                >{artist.artist_name}
+                            </span>
                             <span class="arrow">&rarr;</span>
                         </button>
                     </li>
                 {/each}
             </ul>
-        </div>
-    {:else if artist_input.length > 1}
-        <div class="empty-state">
-            <span>No artists found</span>
-        </div>
-    {:else}
-        <div class="empty-state">
-            <span>Start typing to search for artists</span>
-        </div>
-    {/if}
+        {:else if artist_input.length > 1}
+            <div class="empty-state">No artists found</div>
+        {:else}
+            <div class="empty-state">Start typing to search for artists</div>
+        {/if}
+    </div>
 </section>
 
 <style lang="scss">
     .ranking-artist {
+        width: 100%;
         height: 100%;
         min-height: 0;
-        overflow: hidden;
+        min-width: 0;
         display: flex;
         flex-direction: column;
+        gap: 16px;
     }
 
     .search-wrapper {
-        margin-bottom: 16px;
+        flex-shrink: 0;
     }
 
     .search-input {
@@ -112,6 +109,7 @@
         color: var(--text-primary);
         outline: none;
         transition: all 200ms ease;
+        box-sizing: border-box;
 
         &::placeholder {
             color: var(--text-secondary);
@@ -124,69 +122,81 @@
     }
 
     .results-container {
-        margin-top: 8px;
+        flex: 1;
+        min-height: 0;
+        min-width: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
     }
 
     .artist-list {
-        list-style: none;
         display: flex;
         flex-direction: column;
-        gap: 6px;
+        gap: 10px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
     }
 
     .artist-item {
-        border-radius: 12px;
-        overflow: hidden;
+        min-width: 0;
     }
 
     .artist-button {
         display: flex;
         align-items: center;
         justify-content: space-between;
+        gap: 12px;
+
         width: 100%;
-        padding: 14px 16px;
+        padding: 10px 12px;
+        border-radius: 8px;
         background: transparent;
-        border: 1px solid transparent;
-        border-radius: 12px;
+        border: none;
+        border-left: 2px solid transparent;
         transition: all 150ms ease;
         cursor: pointer;
 
+        font-family: "Inter", system-ui, sans-serif;
+        font-size: 14px;
+        line-height: 1.4;
+        box-sizing: border-box;
+        text-align: left;
+
         &:hover {
-            background: var(--bg-surface-hover);
-            border-color: var(--border-subtle);
-            transform: translateX(4px);
+            background: var(--bg-elevated);
+            border-left-color: var(--border-highlight);
+            padding-left: 10px;
 
             .arrow {
-                color: var(--text-accent);
+                color: var(--text-primary);
+                transform: translateX(4px);
             }
         }
     }
 
     .artist-name {
-        font-family: "Inter", system-ui, sans-serif;
-        font-size: 14px;
-        font-weight: 600;
+        font-weight: 700;
         color: var(--text-primary);
+
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .arrow {
-        font-family: "Inter", system-ui, sans-serif;
-        font-size: 14px;
         color: var(--text-secondary);
-        transition: color 150ms ease;
+        font-size: 16px;
+        transition: all 150ms ease;
+        flex-shrink: 0;
     }
 
+    .loading-state,
     .empty-state {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-top: 48px;
         font-family: "Inter", system-ui, sans-serif;
         font-size: 14px;
         color: var(--text-secondary);
-    }
-
-    .loading-text {
-        color: var(--text-accent);
+        text-align: center;
+        padding: 32px 0;
     }
 </style>

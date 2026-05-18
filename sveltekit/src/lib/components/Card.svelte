@@ -1,5 +1,12 @@
 <script>
-    let { title1, title2, backgroundImage = "", info = "" } = $props();
+    let {
+        title1,
+        title2,
+        backgroundImage = "",
+        title1add = "",
+        title2add = "",
+        rank = "",
+    } = $props();
 
     function getBackgroundImage() {
         return backgroundImage || "";
@@ -16,11 +23,21 @@
 
     <div class="gradient-overlay"></div>
 
+    {#if rank !== ""}
+        <h3 class="card-rank">{rank}</h3>
+    {/if}
+
     <div class="card-content">
-        <h1 class="card-title">{title1}</h1>
+        <h1 class="card-title">
+            {#if title1add !== ""}
+                {title1 + " - " + title1add}
+            {:else}
+                {title1}
+            {/if}
+        </h1>
         <h2 class="card-subtitle">
-            {#if info !== ""}
-                {title2 + " - " + info}
+            {#if title2add !== ""}
+                {title2 + " - " + title2add}
             {:else}
                 {title2}
             {/if}
@@ -73,6 +90,23 @@
         justify-content: flex-end;
         padding: 16px;
         box-sizing: border-box;
+    }
+
+    .card-rank {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        font-family: "Inter", system-ui, sans-serif;
+        font-size: 32px;
+        font-weight: 800;
+        color: var(--text-primary);
+        text-shadow:
+            0 2px 8px rgba(0, 0, 0, 0.9),
+            0 0 4px rgba(0, 0, 0, 0.7);
+        line-height: 1;
+        letter-spacing: -0.03em;
+        margin: 0;
+        z-index: 4;
     }
 
     .card-title {

@@ -2,7 +2,7 @@
     import { onMount } from "svelte";
     import RankingDisplay from "$lib/components/RankingDisplay.svelte";
 
-    let { artist, onBack } = $props();
+    let { artist, onBack, updateRankingDisplay } = $props();
 
     let tracks_input = $state("");
     let tracks = $state([]);
@@ -10,72 +10,75 @@
     let rankedTracks = $state(Array(10).fill(null));
     let fetchedAll = $state(false);
     let isSubmitting = $state(false);
+    let btnText = $state("Send ranking");
+
+    let timer;
 
     async function fetchTracks() {
-        const res = await fetch(
-            "/api/fetch/tracks?title=" +
-                encodeURIComponent(tracks_input) +
-                "&artist_id=" +
-                encodeURIComponent(artist.artist_id),
-            {
-                credentials: "include",
-            },
-        );
-        tracks = await res.json();
+        try {
+            const res = await fetch(
+                `/api/fetch/tracks?title=${encodeURIComponent(tracks_input)}&artist_id=${encodeURIComponent(artist.artist_id)}`,
+                { credentials: "include" },
+            );
+            if (res.ok) {
+                tracks = await res.json();
+            }
+        } catch (error) {
+            console.error("Failed to fetch filtered tracks:", error);
+        }
     }
 
     async function fetchAllTracks() {
-        const res = await fetch(
-            "/api/fetch/tracks?artist_id=" +
-                encodeURIComponent(artist.artist_id),
-            {
-                credentials: "include",
-            },
-        );
-        tracks = await res.json();
+        try {
+            const res = await fetch(
+                `/api/fetch/tracks?artist_id=${encodeURIComponent(artist.artist_id)}`,
+                { credentials: "include" },
+            );
+            if (res.ok) {
+                tracks = await res.json();
+            }
+        } catch (error) {
+            console.error("Failed to fetch all tracks:", error);
+        }
     }
 
     async function loadExistingRanking() {
-        const res1 = await fetch(
-            "/api/fetch/artists?artist=" + encodeURIComponent(artist),
-            {
-                credentials: "include",
-            },
-        );
+        if (!artist || !artist.artist_id) return;
 
-        if (!res1.ok) return;
+        try {
+            const res = await fetch(
+                `/api/ranking/user?artist_id=${artist.artist_id}`,
+                {
+                    credentials: "include",
+                },
+            );
 
-        const artist_ids = await res1.json();
-        const artist_id = artist_ids[0];
+            if (!res.ok) return;
 
-        if (!artist_id) return;
+            const data = await res.json();
+            rankedTracks = Array(10).fill(null);
 
-        const res2 = await fetch("/api/ranking/user?artist_id=" + artist_id, {
-            credentials: "include",
-        });
-
-        if (!res2.ok) return;
-
-        const data = await res2.json();
-
-        rankedTracks = Array(10).fill(null);
-
-        for (const track of data) {
-            const index = track.rank - 1;
-            if (index >= 0 && index < 10) {
-                rankedTracks[index] = track;
+            for (const track of data) {
+                const index = track.rank - 1;
+                if (index >= 0 && index < 10) {
+                    rankedTracks[index] = track;
+                }
             }
+        } catch (error) {
+            console.error("Failed to load existing ranking:", error);
         }
     }
 
     function assignSlot(i) {
         if (selectedTrack) {
+            const trackToSwap = rankedTracks[i];
             rankedTracks = rankedTracks.map((track) =>
                 track && track.song_id === selectedTrack.song_id ? null : track,
             );
             rankedTracks[i] = selectedTrack;
-            selectedTrack = null;
+            selectedTrack = trackToSwap;
         } else {
+            selectedTrack = rankedTracks[i];
             rankedTracks[i] = null;
         }
     }
@@ -88,8 +91,19 @@
         }
     }
 
+    function submittedBtnText() {
+        btnText = "Ranking submitted successfully!";
+
+        clearTimeout(timer);
+
+        timer = setTimeout(() => {
+            btnText = "Send ranking";
+        }, 2000);
+    }
+
     async function sendRanking() {
         isSubmitting = true;
+        btnText = "Submitting...";
         const rankings = [];
 
         for (let i = 0; i < rankedTracks.length; i++) {
@@ -101,36 +115,31 @@
             }
         }
 
-        const res = await fetch(
-            "/api/fetch/artists?artist=" +
-                encodeURIComponent(artist.artist_name),
-            {
+        try {
+            const res = await fetch("/api/ranking/user", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    artist_id: artist.artist_id,
+                    rankings: rankings,
+                }),
                 credentials: "include",
-            },
-        );
-        const results = await res.json();
-        const artist_id = results[0].artist_id;
-
-        fetch("/api/ranking/user", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                artist_id: artist_id,
-                rankings: rankings,
-            }),
-            credentials: "include",
-        })
-            .then((res) => res.json())
-            .then((data) => {
-                isSubmitting = false;
-                alert("Ranking submitted successfully!");
-            })
-            .catch((err) => {
-                isSubmitting = false;
-                console.error(err);
             });
+
+            if (res.ok) {
+                submittedBtnText();
+                updateRankingDisplay();
+            } else {
+                console.error("Failed response from server");
+            }
+        } catch (err) {
+            console.error("Network error when submitting ranking:", err);
+            btnText = "Send ranking";
+        } finally {
+            isSubmitting = false;
+        }
     }
 
     $effect(() => {
@@ -141,10 +150,12 @@
             }
             return;
         }
+
         const timer = setTimeout(() => {
             fetchTracks();
             fetchedAll = false;
         }, 200);
+
         return () => clearTimeout(timer);
     });
 
@@ -173,13 +184,11 @@
             <div class="track-list custom-scrollbar">
                 <ul>
                     {#each tracks as track}
-                        <li
-                            class="track-item"
-                            class:selected={selectedTrack &&
-                                selectedTrack.song_id === track.song_id}
-                        >
+                        <li class="track-item">
                             <button
                                 class="reset track-button"
+                                class:selected={selectedTrack &&
+                                    selectedTrack.song_id === track.song_id}
                                 onclick={() => selectTrack(track)}
                             >
                                 {#if track.small || track.medium}
@@ -221,7 +230,7 @@
             onclick={() => sendRanking()}
             disabled={isSubmitting}
         >
-            {isSubmitting ? "Submitting..." : "Send ranking"}
+            {btnText}
         </button>
     </div>
 </section>
@@ -236,6 +245,7 @@
     }
 
     .header-row {
+        flex-shrink: 0;
         margin-bottom: 16px;
     }
 
@@ -276,11 +286,16 @@
     }
 
     .track-search {
-        flex-shrink: 0;
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
         margin-bottom: 16px;
     }
 
     .track-input {
+        flex-shrink: 0;
         width: 100%;
         height: 48px;
         background: var(--bg-elevated);
@@ -292,7 +307,7 @@
         color: var(--text-primary);
         outline: none;
         transition: all 200ms ease;
-        margin-bottom: 12px;
+        box-sizing: border-box;
 
         &::placeholder {
             color: var(--text-secondary);
@@ -305,42 +320,50 @@
     }
 
     .track-list {
-        max-height: 240px;
+        flex: 1;
+        min-height: 0;
         overflow-y: auto;
-        border-radius: 12px;
-        background: var(--bg-elevated);
-        border: 1px solid var(--border-subtle);
+        overflow-x: hidden;
 
         ul {
             list-style: none;
-            padding: 4px;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
         }
     }
 
     .track-item {
-        border-radius: 8px;
-        overflow: hidden;
-        transition: all 150ms ease;
-
-        &:hover {
-            background: var(--bg-surface-hover);
-        }
-
-        &.selected {
-            background: rgba(176, 228, 204, 0.08);
-            border-left: 2px solid var(--border-highlight);
-        }
+        min-width: 0;
     }
 
     .track-button {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 12px;
         width: 100%;
         padding: 10px 12px;
-        cursor: pointer;
+        background: transparent;
+        border: none;
+        border-left: 2px solid transparent;
         border-radius: 8px;
         transition: all 150ms ease;
+        cursor: pointer;
+        text-align: left;
+        box-sizing: border-box;
+
+        &:hover,
+        &.selected {
+            background: var(--bg-elevated);
+            border-left-color: var(--border-highlight);
+            padding-left: 10px;
+        }
+
+        &.selected {
+            background: rgba(176, 228, 204, 0.08);
+        }
     }
 
     .track-thumb {
@@ -362,6 +385,7 @@
     }
 
     .ranking-grid {
+        flex-shrink: 0;
         display: grid;
         grid-template-columns: repeat(5, 1fr);
         grid-template-rows: repeat(2, 1fr);
@@ -376,6 +400,7 @@
     }
 
     .submit-row {
+        flex-shrink: 0;
         margin-top: 16px;
     }
 

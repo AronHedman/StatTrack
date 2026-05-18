@@ -17,9 +17,7 @@
             credentials: "include",
         });
 
-        if (!res.ok) {
-            window.location.replace("/login");
-        }
+        if (!res.ok) return;
 
         artists = await res.json();
     }
@@ -29,9 +27,7 @@
             credentials: "include",
         });
 
-        if (!res.ok) {
-            window.location.replace("/login");
-        }
+        if (!res.ok) return;
 
         songs = await res.json();
     }
@@ -41,23 +37,24 @@
             credentials: "include",
         });
 
-        if (!res.ok) {
-            window.location.replace("/login");
-        }
+        if (!res.ok) return;
 
         rankingGlobal = await res.json();
     }
 
     onMount(async () => {
-        const res = await fetch("/api/me", {
-            credentials: "include",
-        });
+        const res = await fetch("/api/me", { credentials: "include" });
 
         if (!res.ok) {
             window.location.replace("/login");
+            return;
         }
 
-        await Promise.all([fetchTopArtists(), fetchTopSongs()]);
+        await Promise.all([
+            fetchTopArtists(),
+            fetchTopSongs(),
+            fetchGlobalRanking(),
+        ]);
     });
 </script>
 
@@ -86,7 +83,7 @@
                             <Card
                                 title1={artist.artist_name}
                                 title2={artist.stream_count}
-                                backgroundImage={artist.artist_image}
+                                backgroundImage={artist.top_song_extralarge}
                             />
                         {/each}
                     </div>
@@ -100,7 +97,7 @@
                                 title1={song.title}
                                 title2={song.artist_name}
                                 backgroundImage={song.extralarge}
-                                info={song.stream_count}
+                                title2add={song.stream_count}
                             />
                         {/each}
                     </div>
@@ -111,10 +108,11 @@
                     <div class="sub-container">
                         {#each rankingGlobal as song}
                             <Card
-                                title1={song.title}
-                                title2={song.artist_name}
-                                backgroundImage={song.artist_image}
-                                info={song.quality_score}
+                                title1={"Score: " +
+                                    parseFloat(song.quality_score)}
+                                title2={song.title}
+                                backgroundImage={song.extralarge}
+                                title2add={song.artist_name}
                             />
                         {/each}
                     </div>
@@ -196,14 +194,13 @@
         min-height: 0;
         display: flex;
         flex-direction: column;
-        align-items: stretch;
+        justify-content: flex-start;
         padding: 24px;
+        overflow: hidden;
         border: 1px solid var(--border-subtle);
         border-radius: 20px;
         background-color: var(--bg-surface);
         box-shadow: var(--shadow-card);
-        box-sizing: border-box;
-        overflow: hidden;
     }
 
     .section-title {
@@ -215,19 +212,18 @@
         line-height: 1.3;
         margin: 0 0 16px 0;
         flex-shrink: 0;
+        margin: 0 0 16px 0;
     }
 
     .sub-container {
-        width: 100%;
-        min-width: 0;
+        flex: 1;
         min-height: 0;
         display: grid;
         grid-template-columns: repeat(5, minmax(0, 1fr));
-        grid-auto-rows: minmax(0, 1fr);
         gap: 16px;
-        align-items: stretch;
+        align-content: center;
+        align-items: center;
         overflow: hidden;
-        aspect-ratio: auto;
     }
 
     #ranking-card:hover {

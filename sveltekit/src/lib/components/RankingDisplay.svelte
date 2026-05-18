@@ -62,8 +62,11 @@
         }
 
         &.selected-slot {
-            border: 2px solid var(--border-highlight);
-            box-shadow: 0 0 0 4px rgba(176, 228, 204, 0.2);
+            border-color: var(--border-highlight);
+
+            box-shadow:
+                inset 0 0 0 1px var(--border-highlight),
+                0 0 0 4px rgba(176, 228, 204, 0.2);
             animation: pulse-highlight 2s ease-in-out infinite;
         }
     }

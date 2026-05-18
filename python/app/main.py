@@ -2,6 +2,7 @@ import os
 from flask import Flask, redirect, request, session, jsonify, g
 from flask_cors import CORS
 from datetime import timedelta, datetime
+from collections import defaultdict
 import requests
 import json
 import traceback
@@ -84,14 +85,18 @@ def me():
 
 
 def get_current_user():
-    user = session.get("user") or {}
-    if user == {}:
-        return jsonify({"authenticated": False}), 401
-    if not user["user_id"] or not user["username"]:
-        session.clear()
-        return jsonify({"authenticated": False}), 401
+    user = session.get("user")
+    if not user:
+        return None, None
 
-    return user["user_id"], user["username"]
+    user_id = user.get("user_id")
+    username = user.get("username")
+
+    if not user_id or not username:
+        session.clear()
+        return None, None
+
+    return user_id, username
 
 
 @app.route("/login", methods=["POST"])
@@ -194,6 +199,7 @@ def update_db():
     cursor = g.db.cursor(dictionary=True)
     page = 1
     new_last_synced = None
+    tracks = []
 
     try:
         while True:
@@ -231,13 +237,13 @@ def update_db():
         if new_last_synced:
             db.new_last_synced(g.db, user_id, h.to_db_utc(new_last_synced))
 
+        return jsonify(tracks)
+
     except Exception as e:
         g.db.rollback()
         return jsonify({"error": str(e)}), 500
     finally:
         cursor.close()
-
-    return jsonify(tracks)
 
 
 @app.route("/fetch/tracks", methods=["GET"])
@@ -326,11 +332,31 @@ def fetchtop_artists():
 
     try:
         query = """
-        SELECT uas.artist_id, uas.stream_count, a.artist_name
-        FROM user_artist_stats uas
-        JOIN artists a ON a.artist_id = uas.artist_id
-        WHERE user_id = %s
-        ORDER BY stream_count DESC LIMIT 5
+            SELECT
+            uas.artist_id,
+            uas.stream_count,
+            a.artist_name,
+            (
+                SELECT tss.song_id
+                FROM total_streams_songs tss
+                JOIN songs s ON s.song_id = tss.song_id
+                WHERE s.artist_id = uas.artist_id
+                ORDER BY tss.stream_count DESC
+                LIMIT 1
+            ) AS top_song_id,
+            (
+                SELECT s2.extralarge
+                FROM total_streams_songs tss
+                JOIN songs s2 ON s2.song_id = tss.song_id
+                WHERE s2.artist_id = uas.artist_id
+                ORDER BY tss.stream_count DESC
+                LIMIT 1
+            ) AS top_song_extralarge
+            FROM user_artist_stats uas
+            JOIN artists a ON a.artist_id = uas.artist_id
+            WHERE uas.user_id = %s
+            ORDER BY uas.stream_count DESC
+            LIMIT 5;
         """
         cursor.execute(query, (user_id,))
 
@@ -436,6 +462,67 @@ def get_user_ranking():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route("/ranking/user/complete", methods=["GET"])
+def get_user_ranking_complete():
+    user_id, username = get_current_user()
+    if not user_id:
+        return jsonify({"error": "Not logged in"}), 401
+    
+    cursor = g.db.cursor(dictionary=True)
+
+    try:
+        query = """
+            WITH RandomUserArtists AS (
+            SELECT DISTINCT artist_id
+            FROM user_artist_rankings
+            WHERE user_id = %s
+            ORDER BY RAND()
+            LIMIT 10
+                )
+            SELECT 
+                r.song_id,
+                r.rank,
+                s.title,
+                gar.quality_score,
+                s.artist_id,
+                a.artist_name,
+                s.extralarge,
+                s.large,
+                s.medium,
+                s.small
+            FROM user_artist_rankings r
+            JOIN RandomUserArtists ra ON r.artist_id = ra.artist_id
+            JOIN songs s ON s.song_id = r.song_id
+            JOIN artists a ON a.artist_id = s.artist_id
+            JOIN global_artist_rankings gar ON gar.song_id = r.song_id
+            WHERE r.user_id = %s
+            ORDER BY a.artist_name ASC, r.rank ASC; 
+            """
+        cursor.execute(query, (user_id, user_id))
+
+        flat_results = cursor.fetchall()
+
+        grouped_artists = defaultdict(list)
+        for row in flat_results:
+            artist_name = row['artist_name']
+            grouped_artists[artist_name].append(row)
+        
+        results = []
+        for artist_name, songs in grouped_artists.items():
+            results.append({
+                "artist_name": artist_name,
+                "songs": songs
+            })
+        
+        return jsonify(results)
+        
+        return jsonify(results)
+
+    except Exception as e:
+        g.db.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
 
 @app.route("/ranking/global", methods=["GET"])
 def get_global_ranking():

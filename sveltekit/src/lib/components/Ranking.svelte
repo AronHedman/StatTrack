@@ -2,6 +2,8 @@
     import RankingSearchArtist from "$lib/components/RankingSearchArtist.svelte";
     import RankingSongs from "$lib/components/RankingSongs.svelte";
 
+    let { updateRankingDisplay } = $props();
+
     let selectedArtist = $state(null);
 
     function handleSelectArtist(artist) {
@@ -17,7 +19,11 @@
     {#if !selectedArtist}
         <RankingSearchArtist onSelect={handleSelectArtist} />
     {:else}
-        <RankingSongs artist={selectedArtist} onBack={handleBack} />
+        <RankingSongs
+            artist={selectedArtist}
+            onBack={handleBack}
+            {updateRankingDisplay}
+        />
     {/if}
 </section>
 
