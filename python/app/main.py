@@ -246,6 +246,26 @@ def update_db():
         cursor.close()
 
 
+@app.route("/userSearch", methods=["GET"])
+def searchUsers():
+    search_param = request.args.get("param")
+
+    cursor = g.db.cursor(dictionary=True)
+
+    query = """
+        SELECT * 
+        FROM users
+        WHERE username 
+        LIKE %s
+    """
+
+    cursor.execute(query, (f"%{search_param}%",))
+    results = cursor.fetchall()
+
+    cursor.close()
+    return jsonify(results)
+
+
 @app.route("/fetch/tracks", methods=["GET"])
 def fetch_tracks():
     artist = request.args.get("artist")
@@ -462,12 +482,13 @@ def get_user_ranking():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
 @app.route("/ranking/user/complete", methods=["GET"])
 def get_user_ranking_complete():
     user_id, username = get_current_user()
     if not user_id:
         return jsonify({"error": "Not logged in"}), 401
-    
+
     cursor = g.db.cursor(dictionary=True)
 
     try:
@@ -504,25 +525,20 @@ def get_user_ranking_complete():
 
         grouped_artists = defaultdict(list)
         for row in flat_results:
-            artist_name = row['artist_name']
+            artist_name = row["artist_name"]
             grouped_artists[artist_name].append(row)
-        
+
         results = []
         for artist_name, songs in grouped_artists.items():
-            results.append({
-                "artist_name": artist_name,
-                "songs": songs
-            })
-        
-        return jsonify(results)
-        
-        return jsonify(results)
+            results.append({"artist_name": artist_name, "songs": songs})
 
+        return jsonify(results)
     except Exception as e:
         g.db.rollback()
         return jsonify({"error": str(e)}), 500
     finally:
         cursor.close()
+
 
 @app.route("/ranking/global", methods=["GET"])
 def get_global_ranking():

@@ -28,7 +28,7 @@ def verify_user(db_conn, username, password):
     if result:
         return check_password_hash(
             result["password"], password
-        )  # chack password or return false
+        )  # check password or return false
     return False
 
 
